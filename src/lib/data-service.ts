@@ -13,25 +13,25 @@ import {
 } from '@/types/database';
 import { getTodayWIB, isWithinTimeWindow } from './time-utils';
 
-const STORAGE_KEY_PROFILES = 'osis_mpk_ibadah_profiles_v2';
-const STORAGE_KEY_PRESENSI = 'osis_mpk_ibadah_presensi_v2';
-const STORAGE_KEY_SETTINGS = 'osis_mpk_ibadah_settings_v2';
-const STORAGE_KEY_CHECKS = 'osis_mpk_ibadah_checks_v2';
-const STORAGE_KEY_LOGS = 'osis_mpk_ibadah_logs_v2';
-const STORAGE_KEY_CURRENT_USER = 'osis_mpk_ibadah_current_user_v2';
+const STORAGE_KEY_PROFILES = 'osis_mpk_ibadah_profiles_v3';
+const STORAGE_KEY_PRESENSI = 'osis_mpk_ibadah_presensi_v3';
+const STORAGE_KEY_SETTINGS = 'osis_mpk_ibadah_settings_v3';
+const STORAGE_KEY_CHECKS = 'osis_mpk_ibadah_checks_v3';
+const STORAGE_KEY_LOGS = 'osis_mpk_ibadah_logs_v3';
+const STORAGE_KEY_CURRENT_USER = 'osis_mpk_ibadah_current_user_v3';
 
 // 39 ANGGOTA ASLI SESUAI REKAP MONITORING OSIS & MPK + 1 PEMBINA
 export const DEFAULT_PROFILES: Profile[] = [
-  { id: 'usr-01', nis: '2425001', nama: 'Adelia Nur Zahra', full_name: 'Adelia Nur Zahra', kelas: 'XI MP', organisasi: 'MPK', jabatan: 'Koordinator Kerohanian MPK', agama: 'islam', role: 'pengurus', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'usr-01', nis: '2425001', nama: 'Adelia Nur Zahra', full_name: 'Adelia Nur Zahra', kelas: 'XI MP', organisasi: 'MPK', jabatan: 'Anggota MPK', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'usr-02', nis: '2425002', nama: 'A Isy Mifta Nazhilfa', full_name: 'A Isy Mifta Nazhilfa', kelas: 'X AK 1', organisasi: 'OSIS', jabatan: 'Anggota OSIS', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: 'usr-03', nis: '2425003', nama: 'Al Qoirul Lathif Nazzril Putra', full_name: 'Al Qoirul Lathif Nazzril Putra', kelas: 'X RPL', organisasi: 'OSIS', jabatan: 'Anggota OSIS', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'usr-03', nis: '2425003', nama: 'Al Qoirul Lathif Nazzril Putra', full_name: 'Al Qoirul Lathif Nazzril Putra', kelas: 'X RPL', organisasi: 'OSIS', jabatan: 'Divisi Keagamaan OSIS', agama: 'islam', role: 'pengurus', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'usr-04', nis: '2425004', nama: 'Amelia Putri', full_name: 'Amelia Putri', kelas: 'XI AK 1', organisasi: 'MPK', jabatan: 'Anggota MPK', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'usr-05', nis: '2425005', nama: 'Amyra Nur Azalia', full_name: 'Amyra Nur Azalia', kelas: 'X AK 1', organisasi: 'OSIS', jabatan: 'Anggota OSIS', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'usr-06', nis: '2425006', nama: 'Annisa Maulida Putri Hardiansyah', full_name: 'Annisa Maulida Putri Hardiansyah', kelas: 'XI AK 2', organisasi: 'MPK', jabatan: 'Anggota MPK', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'usr-07', nis: '2425007', nama: 'Aulia Fitri', full_name: 'Aulia Fitri', kelas: 'X BR 2', organisasi: 'OSIS', jabatan: 'Anggota OSIS', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'usr-08', nis: '2425008', nama: 'Bintang Very Purwanto', full_name: 'Bintang Very Purwanto', kelas: 'X RPL', organisasi: 'OSIS', jabatan: 'Anggota OSIS', agama: 'kristen', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'usr-09', nis: '2425009', nama: 'Dimas Putra Satria', full_name: 'Dimas Putra Satria', kelas: 'XI AK 2', organisasi: 'MPK', jabatan: 'Anggota MPK', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: 'usr-10', nis: '2425010', nama: 'Fadhyl Alhafizd', full_name: 'Fadhyl Alhafizd', kelas: 'X RPL', organisasi: 'OSIS', jabatan: 'Koordinator Keagamaan OSIS', agama: 'islam', role: 'pengurus', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'usr-10', nis: '2425010', nama: 'Fadhyl Alhafizd', full_name: 'Fadhyl Alhafizd', kelas: 'X RPL', organisasi: 'OSIS', jabatan: 'Anggota OSIS', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'usr-11', nis: '2425011', nama: 'Hanivia Putria Idris', full_name: 'Hanivia Putria Idris', kelas: 'X BR 1', organisasi: 'OSIS', jabatan: 'Anggota OSIS', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'usr-12', nis: '2425012', nama: 'Isya Al Faqih Hasan', full_name: 'Isya Al Faqih Hasan', kelas: 'X BR 1', organisasi: 'OSIS', jabatan: 'Anggota OSIS', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'usr-13', nis: '2425013', nama: 'Jihada Amalia', full_name: 'Jihada Amalia', kelas: 'XI AK 1', organisasi: 'OSIS', jabatan: 'Anggota OSIS', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
@@ -39,11 +39,11 @@ export const DEFAULT_PROFILES: Profile[] = [
   { id: 'usr-15', nis: '2425015', nama: 'Kartika Luna Amallya', full_name: 'Kartika Luna Amallya', kelas: 'XI RPL 1', organisasi: 'OSIS', jabatan: 'Anggota OSIS', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'usr-16', nis: '2425016', nama: 'Keyla Ayu Fitriandini', full_name: 'Keyla Ayu Fitriandini', kelas: 'X MP', organisasi: 'OSIS', jabatan: 'Anggota OSIS', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'usr-17', nis: '2425017', nama: 'Keysha Aurelia', full_name: 'Keysha Aurelia', kelas: 'X AK 2', organisasi: 'OSIS', jabatan: 'Anggota OSIS', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: 'usr-18', nis: '2425018', nama: 'Maria Jame', full_name: 'Maria Jame', kelas: 'XI RPL 1', organisasi: 'OSIS', jabatan: 'Anggota OSIS', agama: 'kristen', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'usr-18', nis: '2425018', nama: 'Maria Jame', full_name: 'Maria Jame', kelas: 'XI RPL 1', organisasi: 'OSIS', jabatan: 'Divisi Keagamaan OSIS (Kristen)', agama: 'kristen', role: 'pengurus', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'usr-19', nis: '2425019', nama: 'Muhamad Faiq Adnan', full_name: 'Muhamad Faiq Adnan', kelas: 'XI RPL 1', organisasi: 'OSIS', jabatan: 'Anggota OSIS', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'usr-20', nis: '2425020', nama: 'Muhamad Zidan Pirgyawan', full_name: 'Muhamad Zidan Pirgyawan', kelas: 'XI RPL', organisasi: 'MPK', jabatan: 'Anggota MPK', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'usr-21', nis: '2425021', nama: 'Muhammad Dafa', full_name: 'Muhammad Dafa', kelas: 'XI BR', organisasi: 'OSIS', jabatan: 'Anggota OSIS', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: 'usr-22', nis: '2425022', nama: 'Muhammad Faris', full_name: 'Muhammad Faris', kelas: 'XI BR', organisasi: 'OSIS', jabatan: 'Anggota OSIS', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'usr-22', nis: '2425022', nama: 'Muhammad Faris', full_name: 'Muhammad Faris', kelas: 'XI BR', organisasi: 'OSIS', jabatan: 'Divisi Keagamaan OSIS', agama: 'islam', role: 'pengurus', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'usr-23', nis: '2425023', nama: 'Muhammad Hafid Addison', full_name: 'Muhammad Hafid Addison', kelas: 'X AK 2', organisasi: 'OSIS', jabatan: 'Anggota OSIS', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'usr-24', nis: '2425024', nama: 'Muhammad Irvan Hakim', full_name: 'Muhammad Irvan Hakim', kelas: 'XI RPL 2', organisasi: 'OSIS', jabatan: 'Anggota OSIS', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'usr-25', nis: '2425025', nama: 'Nabila Firanisa Ramadhani', full_name: 'Nabila Firanisa Ramadhani', kelas: 'XI RPL 1', organisasi: 'OSIS', jabatan: 'Anggota OSIS', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
@@ -102,20 +102,20 @@ function getInitialPresensi(): PresensiIbadah[] {
   return [
     {
       id: 'pre-1',
-      profile_id: 'usr-03',
-      user_id: 'usr-03',
+      profile_id: 'usr-02',
+      user_id: 'usr-02',
       tanggal: today,
       ibadah: 'sholat_dzuhur',
       status: 'hadir',
-      saksi: 'Fadhyl Alhafizd',
+      saksi: 'Al Qoirul Lathif Nazzril Putra',
       waktu_checkin: `${today}T11:45:00+07:00`,
       dibuat_pada: `${today}T11:45:00+07:00`,
       input_mode: 'mandiri',
       status_verifikasi: 'terverifikasi',
       catatan_pengurus: 'Tercatat di musholla',
       catatan_verifikasi: 'Tercatat di musholla',
-      diverifikasi_oleh: 'usr-10',
-      verified_by: 'usr-10',
+      diverifikasi_oleh: 'usr-03',
+      verified_by: 'usr-03',
       verified_at: `${today}T12:05:00+07:00`,
       created_at: `${today}T11:45:00+07:00`,
       updated_at: `${today}T12:05:00+07:00`,
@@ -135,8 +135,8 @@ function getInitialPresensi(): PresensiIbadah[] {
       status_verifikasi: 'terverifikasi',
       catatan_pengurus: 'Dikonfirmasi',
       catatan_verifikasi: 'Dikonfirmasi',
-      diverifikasi_oleh: 'usr-10',
-      verified_by: 'usr-10',
+      diverifikasi_oleh: 'usr-03',
+      verified_by: 'usr-03',
       verified_at: `${today}T12:10:00+07:00`,
       created_at: `${today}T11:35:00+07:00`,
       updated_at: `${today}T12:10:00+07:00`,
@@ -212,8 +212,8 @@ class DataService {
   public getCurrentUser(): Profile {
     const saved = this.getItem<Profile | null>(STORAGE_KEY_CURRENT_USER, null);
     if (saved) return saved;
-    // Default Fadhyl Alhafizd (Pengurus)
-    const def = DEFAULT_PROFILES[9]; // Fadhyl Alhafizd
+    // Default: Al Qoirul Lathif Nazzril Putra (Absen 3 - Pengurus Divisi Keagamaan OSIS)
+    const def = DEFAULT_PROFILES[2];
     this.setCurrentUser(def);
     return def;
   }
@@ -556,10 +556,10 @@ class DataService {
     return this.getItem<AuditLog[]>(STORAGE_KEY_LOGS, [
       {
         id: 'log-1',
-        actor_name: 'Fadhyl Alhafizd',
+        actor_name: 'Al Qoirul Lathif Nazzril Putra',
         action: 'VERIFIKASI',
         table_name: 'presensi_ibadah',
-        details: { nis: '2425003', status: 'terverifikasi' },
+        details: { nis: '2425002', status: 'terverifikasi' },
         created_at: `${getTodayWIB()}T12:05:00+07:00`,
       },
     ]);

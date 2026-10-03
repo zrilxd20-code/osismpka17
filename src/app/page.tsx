@@ -47,7 +47,7 @@ export default function HomePage() {
   const handleResetData = () => {
     if (confirm('Kembalikan data ke awal (seed contoh)?')) {
       dataService.resetToDefault();
-      const def = DEFAULT_PROFILES[0];
+      const def = DEFAULT_PROFILES[2]; // Al Qoirul Lathif Nazzril Putra
       dataService.setCurrentUser(def);
       setCurrentUser(def);
       setRefreshKey((prev) => prev + 1);
