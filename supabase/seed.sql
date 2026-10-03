@@ -1,52 +1,65 @@
 -- =====================================================================
--- SEED DATA: PENCATATAN IBADAH OSIS & MPK
+-- SEED DATA RESMI: 39 ANGGOTA OSIS & MPK + PEMBINA
 -- =====================================================================
 
--- 1. SEED PENGATURAN JENDELA WAKTU
-INSERT INTO public.settings_time_windows (ibadah, label, start_time, end_time, is_active, days_active, keterangan)
-VALUES 
-    ('sholat_dzuhur', 'Sholat Dzuhur Berjamaah', '11:30:00', '14:00:00', true, '{1,2,3,4,5}', 'Waktu Dzuhur di Musholla SMA'),
-    ('pendalaman_iman', 'Pendalaman Iman Kristen/Katolik', '11:45:00', '13:45:00', true, '{1,2,3,4,5}', 'Ruang Kebaktian / Agama Kristen')
-ON CONFLICT (ibadah) DO UPDATE SET
-    start_time = EXCLUDED.start_time,
-    end_time = EXCLUDED.end_time,
-    is_active = EXCLUDED.is_active;
-
--- 2. CATATAN CONTOH PENGGUNA (PROFILES)
--- ID berikut mengacu ke UUID contoh (dalam produksi terhubung ke auth.users)
-INSERT INTO public.profiles (id, nis, full_name, role, agama, organisasi, jabatan, kelas, is_active)
-VALUES 
-    ('11111111-1111-1111-1111-111111111111', '2425001', 'Fadhil Pratama', 'pengurus', 'islam', 'OSIS', 'Koordinator Divisi Keagamaan', 'XI IPA 1', true),
-    ('22222222-2222-2222-2222-222222222222', '2425002', 'Nadhira Aulia', 'pengurus', 'islam', 'MPK', 'Komisi Kerohanian & Akhlak', 'XI IPS 2', true),
-    ('33333333-3333-3333-3333-333333333333', '2425003', 'Ahmad Rizky', 'anggota', 'islam', 'OSIS', 'Anggota Sekbid 1 (Bintal)', 'X-1', true),
-    ('44444444-4444-4444-4444-444444444444', '2425004', 'Siti Sarah', 'anggota', 'islam', 'OSIS', 'Anggota Sekbid Humas', 'X-3', true),
-    ('55555555-5555-5555-5555-555555555555', '2425005', 'Daniel Christian', 'anggota', 'kristen', 'MPK', 'Anggota Komisi Pengawasan', 'XI IPA 3', true),
-    ('66666666-6666-6666-6666-666666666666', '2425006', 'Grace Gabriella', 'anggota', 'kristen', 'OSIS', 'Anggota Sekbid Seni & Budaya', 'X-2', true),
-    ('77777777-7777-7777-7777-777777777777', '2425007', 'Muhammad Iqbal', 'anggota', 'islam', 'MPK', 'Anggota Komisi Kebijakan', 'XI IPS 1', true),
-    ('88888888-8888-8888-8888-888888888888', '2425008', 'Maria Yosephin', 'anggota', 'katolik', 'OSIS', 'Anggota Sekbid IT', 'X-4', true),
-    ('99999999-9999-9999-9999-999999999999', '19850101', 'Drs. H. Mulyadi, M.Pd.', 'pembina', 'islam', 'OSIS', 'Pembina OSIS & Kesiswaan', 'Guru Pembina', true)
-ON CONFLICT (nis) DO NOTHING;
-
--- 3. SEED PRESENSI CONTOH
-INSERT INTO public.presensi_ibadah 
-    (user_id, tanggal, ibadah, status, keterangan_halangan, saksi, waktu_checkin, input_mode, status_verifikasi, catatan_pengurus)
+-- 1. SEED PENGATURAN JENIS IBADAH
+INSERT INTO public.jenis_ibadah (nama, label, agama_wajib, jam_mulai, jam_selesai, hari_aktif)
 VALUES
-    -- Hari ini
-    ('33333333-3333-3333-3333-333333333333', CURRENT_DATE, 'sholat_dzuhur', 'hadir', NULL, 'Fadhil Pratama', (now() - interval '30 minutes'), 'mandiri', 'terverifikasi', 'Tercatat di shaf kedua'),
-    ('44444444-4444-4444-4444-444444444444', CURRENT_DATE, 'sholat_dzuhur', 'izin_halangan', 'Halangan syar''i (haid)', NULL, (now() - interval '45 minutes'), 'mandiri', 'terverifikasi', 'Dikonfirmasi'),
-    ('55555555-5555-5555-5555-555555555555', CURRENT_DATE, 'pendalaman_iman', 'hadir', NULL, 'Grace Gabriella', (now() - interval '20 minutes'), 'mandiri', 'menunggu', NULL),
-    ('77777777-7777-7777-7777-777777777777', CURRENT_DATE, 'sholat_dzuhur', 'hadir', NULL, 'Ahmad Rizky', (now() - interval '10 minutes'), 'mandiri', 'menunggu', NULL),
-    
-    -- Kemarin
-    ('33333333-3333-3333-3333-333333333333', (CURRENT_DATE - 1), 'sholat_dzuhur', 'hadir', NULL, 'Raka', (now() - interval '1 day'), 'mandiri', 'terverifikasi', NULL),
-    ('44444444-4444-4444-4444-444444444444', (CURRENT_DATE - 1), 'sholat_dzuhur', 'hadir', NULL, 'Aisyah', (now() - interval '1 day'), 'mandiri', 'terverifikasi', NULL),
-    ('55555555-5555-5555-5555-555555555555', (CURRENT_DATE - 1), 'pendalaman_iman', 'hadir', NULL, 'Grace', (now() - interval '1 day'), 'mandiri', 'terverifikasi', NULL),
-    ('66666666-6666-6666-6666-666666666666', (CURRENT_DATE - 1), 'pendalaman_iman', 'tidak_hadir', NULL, NULL, (now() - interval '1 day'), 'manual_pengurus', 'terverifikasi', 'Tanpa keterangan'),
-    ('77777777-7777-7777-7777-777777777777', (CURRENT_DATE - 1), 'sholat_dzuhur', 'hadir', NULL, 'Fadhil', (now() - interval '1 day'), 'mandiri', 'pelanggaran', 'Terbukti berada di kantin saat jam dzuhur')
-ON CONFLICT (user_id, tanggal, ibadah) DO NOTHING;
+    ('sholat_dzuhur', 'Sholat Dzuhur Berjamaah', ARRAY['islam'], '11:30:00', '14:00:00', '{1,2,3,4,5}'),
+    ('pendalaman_iman', 'Pendalaman Iman Kristen/Katolik', ARRAY['kristen', 'katolik'], '11:45:00', '13:45:00', '{1,2,3,4,5}')
+ON CONFLICT (nama) DO UPDATE SET
+    label = EXCLUDED.label,
+    agama_wajib = EXCLUDED.agama_wajib,
+    jam_mulai = EXCLUDED.jam_mulai,
+    jam_selesai = EXCLUDED.jam_selesai,
+    hari_aktif = EXCLUDED.hari_aktif;
 
--- 4. SEED AUDIT LOGS
-INSERT INTO public.audit_logs (user_id, actor_name, action, table_name, details)
+-- 2. SEED PROFILES (39 ANGGOTA OSIS & MPK + 1 PEMBINA)
+INSERT INTO public.profiles (id, nis, nama, kelas, jabatan, agama, role, aktif, must_change_password)
 VALUES
-    ('11111111-1111-1111-1111-111111111111', 'Fadhil Pratama', 'VERIFIKASI', 'presensi_ibadah', '{"status": "terverifikasi", "target_nis": "2425003"}'::jsonb),
-    ('11111111-1111-1111-1111-111111111111', 'Fadhil Pratama', 'FLAG_PELANGGARAN', 'presensi_ibadah', '{"nis": "2425007", "catatan": "Terbukti berada di kantin saat jam dzuhur"}'::jsonb);
+    ('00000000-0000-0000-0000-000000000001', '2425001', 'Adelia Nur Zahra', 'XI MP', 'Koordinator Kerohanian MPK', 'islam', 'pengurus', true, true),
+    ('00000000-0000-0000-0000-000000000002', '2425002', 'A Isy Mifta Nazhilfa', 'X AK 1', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000003', '2425003', 'Al Qoirul Lathif Nazzril Putra', 'X RPL', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000004', '2425004', 'Amelia Putri', 'XI AK 1', 'Anggota MPK', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000005', '2425005', 'Amyra Nur Azalia', 'X AK 1', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000006', '2425006', 'Annisa Maulida Putri Hardiansyah', 'XI AK 2', 'Anggota MPK', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000007', '2425007', 'Aulia Fitri', 'X BR 2', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000008', '2425008', 'Bintang Very Purwanto', 'X RPL', 'Anggota OSIS', 'kristen', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000009', '2425009', 'Dimas Putra Satria', 'XI AK 2', 'Anggota MPK', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000010', '2425010', 'Fadhyl Alhafizd', 'X RPL', 'Koordinator Keagamaan OSIS', 'islam', 'pengurus', true, true),
+    ('00000000-0000-0000-0000-000000000011', '2425011', 'Hanivia Putria Idris', 'X BR 1', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000012', '2425012', 'Isya Al Faqih Hasan', 'X BR 1', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000013', '2425013', 'Jihada Amalia', 'XI AK 1', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000014', '2425014', 'Jordhan Khadhil Setiawan', 'XI RPL 1', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000015', '2425015', 'Kartika Luna Amallya', 'XI RPL 1', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000016', '2425016', 'Keyla Ayu Fitriandini', 'X MP', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000017', '2425017', 'Keysha Aurelia', 'X AK 2', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000018', '2425018', 'Maria Jame', 'XI RPL 1', 'Anggota OSIS', 'kristen', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000019', '2425019', 'Muhamad Faiq Adnan', 'XI RPL 1', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000020', '2425020', 'Muhamad Zidan Pirgyawan', 'XI RPL', 'Anggota MPK', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000021', '2425021', 'Muhammad Dafa', 'XI BR', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000022', '2425022', 'Muhammad Faris', 'XI BR', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000023', '2425023', 'Muhammad Hafid Addison', 'X AK 2', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000024', '2425024', 'Muhammad Irvan Hakim', 'XI RPL 2', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000025', '2425025', 'Nabila Firanisa Ramadhani', 'XI RPL 1', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000026', '2425026', 'Nisfa Alvia Rahmadany', 'X BR 1', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000027', '2425027', 'Novita Gendhis Pramesththi', 'X MP', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000028', '2425028', 'Nur Efendy', 'X BR 2', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000029', '2425029', 'Oneal Pratama', 'XI AK 1', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000030', '2425030', 'Polbe Seriota Sihite', 'XI AK 1', 'Anggota OSIS', 'kristen', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000031', '2425031', 'Rafifah Salsabila Zahra', 'X AK 1', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000032', '2425032', 'Rifky Aditya Hadi', 'XI AK 1', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000033', '2425033', 'Sahal Kholidil Azam', 'XI RPL 1', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000034', '2425034', 'Selli Edelweiss Salsabila', 'X AK 1', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000035', '2425035', 'Shania Aurelia Syarief', 'X AK 2', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000036', '2425036', 'Sisca Aulia Rahmadani', 'X BR 1', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000037', '2425037', 'Syafira Aulia', 'X AK 1', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000038', '2425038', 'Zakiya Innayati', 'X BR 2', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000039', '2425039', 'Zhiva Iqnantia Nandini', 'X AK 1', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('99999999-9999-9999-9999-999999999999', '19850101', 'Drs. H. Mulyadi, M.Pd.', 'Guru Pembina', 'Pembina OSIS & Kesiswaan', 'islam', 'pembina', true, false)
+ON CONFLICT (nis) DO UPDATE SET
+    nama = EXCLUDED.nama,
+    kelas = EXCLUDED.kelas,
+    jabatan = EXCLUDED.jabatan,
+    agama = EXCLUDED.agama,
+    role = EXCLUDED.role;
