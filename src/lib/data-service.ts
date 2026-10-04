@@ -209,17 +209,21 @@ class DataService {
     return this.getProfiles().find((p) => p.nis.trim() === nis.trim());
   }
 
-  public getCurrentUser(): Profile {
-    const saved = this.getItem<Profile | null>(STORAGE_KEY_CURRENT_USER, null);
-    if (saved) return saved;
-    // Default: Al Qoirul Lathif Nazzril Putra (Absen 3 - Pengurus Divisi Keagamaan OSIS)
-    const def = DEFAULT_PROFILES[2];
-    this.setCurrentUser(def);
-    return def;
+  public getCurrentUser(): Profile | null {
+    return this.getItem<Profile | null>(STORAGE_KEY_CURRENT_USER, null);
   }
 
   public setCurrentUser(user: Profile): void {
     this.setItem(STORAGE_KEY_CURRENT_USER, user);
+  }
+
+  public logout(): void {
+    if (!this.isBrowser) return;
+    try {
+      localStorage.removeItem(STORAGE_KEY_CURRENT_USER);
+    } catch (e) {
+      console.error('Failed to logout', e);
+    }
   }
 
   public addProfile(newProfile: Omit<Profile, 'id' | 'created_at' | 'updated_at' | 'nama' | 'aktif'> & { nama?: string; aktif?: boolean }): Profile {
@@ -238,7 +242,7 @@ class DataService {
     this.setItem(STORAGE_KEY_PROFILES, profiles);
 
     this.logAudit({
-      actor_name: this.getCurrentUser().full_name,
+      actor_name: this.getCurrentUser()?.full_name || 'Pengurus OSIS',
       action: 'TAMBAH_ANGGOTA',
       table_name: 'profiles',
       record_id: created.id,
@@ -258,7 +262,7 @@ class DataService {
     this.setItem(STORAGE_KEY_SETTINGS, settings);
 
     this.logAudit({
-      actor_name: this.getCurrentUser().full_name,
+      actor_name: this.getCurrentUser()?.full_name || 'Pengurus OSIS',
       action: 'UPDATE_JENDELA_WAKTU',
       table_name: 'settings_time_windows',
       details: { ibadah, ...updates },
@@ -381,7 +385,7 @@ class DataService {
     keteranganHalangan?: string;
     catatanPengurus?: string;
   }): { success: boolean; message: string; data?: PresensiIbadah } {
-    const pengurus = this.getCurrentUser();
+    const pengurus = this.getCurrentUser() || DEFAULT_PROFILES[2];
     const presensiList = this.getItem<PresensiIbadah[]>(STORAGE_KEY_PRESENSI, getInitialPresensi());
 
     const existingIndex = presensiList.findIndex(
@@ -453,7 +457,7 @@ class DataService {
     statusVerifikasi: VerifikasiStatus,
     catatan?: string
   ): { success: boolean; message: string } {
-    const pengurus = this.getCurrentUser();
+    const pengurus = this.getCurrentUser() || DEFAULT_PROFILES[2];
     const presensiList = this.getItem<PresensiIbadah[]>(STORAGE_KEY_PRESENSI, getInitialPresensi());
     const index = presensiList.findIndex((p) => p.id === presensiId);
 
@@ -497,7 +501,7 @@ class DataService {
   }
 
   public generateRandomCheck(ibadah: IbadahType, targetCount: number = 3): RandomCheckRecord {
-    const pengurus = this.getCurrentUser();
+    const pengurus = this.getCurrentUser() || DEFAULT_PROFILES[2];
     const today = getTodayWIB();
     const profiles = this.getProfiles().filter((p) => {
       if (!p.is_active || p.role === 'pembina') return false;
