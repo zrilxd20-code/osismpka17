@@ -86,43 +86,70 @@ export default function HomePage() {
           </div>
 
           <div className="flex items-center gap-1.5 flex-wrap">
-            {DEFAULT_PROFILES.slice(0, 4).map((p) => {
-              const active = p.id === currentUser.id;
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => handleSelectUser(p)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
-                    active
-                      ? 'bg-emerald-400 text-emerald-950 shadow-xs scale-102'
-                      : 'bg-emerald-900/80 hover:bg-emerald-800 text-emerald-100'
-                  }`}
-                >
-                  {p.role === 'pengurus'
-                    ? 'Pengurus'
-                    : p.agama === 'kristen'
-                    ? 'Anggota (Kristen)'
-                    : p.full_name.split(' ')[0]}
-                </button>
-              );
-            })}
-
-            {/* Tombol Pembina */}
+            {/* Pengurus (Kamu) */}
             <button
-              onClick={() => handleSelectUser(DEFAULT_PROFILES[8])}
+              onClick={() => handleSelectUser(DEFAULT_PROFILES[2])}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                currentUser.id === 'usr-03'
+                  ? 'bg-emerald-400 text-emerald-950 shadow-xs'
+                  : 'bg-emerald-900/80 hover:bg-emerald-800 text-emerald-100'
+              }`}
+            >
+              Pengurus (Al Qoirul)
+            </button>
+
+            {/* Pengurus Kristen (Maria Jame) */}
+            <button
+              onClick={() => handleSelectUser(DEFAULT_PROFILES[17])}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                currentUser.id === 'usr-18'
+                  ? 'bg-teal-300 text-teal-950 shadow-xs'
+                  : 'bg-teal-900/80 hover:bg-teal-800 text-teal-100'
+              }`}
+            >
+              Pengurus (Maria Jame)
+            </button>
+
+            {/* Anggota Islam (A Isy) */}
+            <button
+              onClick={() => handleSelectUser(DEFAULT_PROFILES[1])}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                currentUser.id === 'usr-02'
+                  ? 'bg-blue-300 text-blue-950 shadow-xs'
+                  : 'bg-blue-900/70 hover:bg-blue-800 text-blue-100'
+              }`}
+            >
+              Anggota (Islam)
+            </button>
+
+            {/* Anggota Kristen (Bintang Very) */}
+            <button
+              onClick={() => handleSelectUser(DEFAULT_PROFILES[7])}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                currentUser.id === 'usr-08'
+                  ? 'bg-sky-300 text-sky-950 shadow-xs'
+                  : 'bg-sky-900/70 hover:bg-sky-800 text-sky-100'
+              }`}
+            >
+              Anggota (Kristen)
+            </button>
+
+            {/* Tombol Pembina (Drs. H. Mulyadi) */}
+            <button
+              onClick={() => handleSelectUser(DEFAULT_PROFILES[39] || DEFAULT_PROFILES[DEFAULT_PROFILES.length - 1])}
               className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
                 currentUser.role === 'pembina'
                   ? 'bg-purple-300 text-purple-950 shadow-xs'
                   : 'bg-purple-900/70 hover:bg-purple-800 text-purple-100'
               }`}
             >
-              Pembina (Read-Only)
+              Pembina
             </button>
 
             {/* Reset data seed */}
             <button
               onClick={handleResetData}
-              title="Reset data demo"
+              title="Reset data demo ke awal"
               className="p-1 rounded-lg text-emerald-400 hover:text-white hover:bg-emerald-900 transition-colors ml-1"
             >
               <RefreshCw className="w-3.5 h-3.5" />
