@@ -280,7 +280,7 @@ export async function GET(req: NextRequest) {
       // Tanda Tangan
       page.drawText('Mengetahui,', { x: 80, y: 75, size: 9, font: fontRegular, color: rgb(0.1, 0.1, 0.1) });
       page.drawText('Pembina OSIS & MPK', { x: 80, y: 62, size: 9, font: fontBold, color: rgb(0.1, 0.1, 0.1) });
-      page.drawText('( Drs. H. Mulyadi, M.Pd. )', { x: 80, y: 25, size: 9, font: fontBold, color: rgb(0.1, 0.1, 0.1) });
+      page.drawText('( Nurkholis Aiman / Maria Ulfa )', { x: 80, y: 25, size: 9, font: fontBold, color: rgb(0.1, 0.1, 0.1) });
 
       page.drawText('Diverifikasi oleh,', { x: width - 220, y: 75, size: 9, font: fontRegular, color: rgb(0.1, 0.1, 0.1) });
       page.drawText('Koordinator Divisi Keagamaan', { x: width - 220, y: 62, size: 9, font: fontBold, color: rgb(0.1, 0.1, 0.1) });

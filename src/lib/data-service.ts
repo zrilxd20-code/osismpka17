@@ -19,8 +19,9 @@ const STORAGE_KEY_SETTINGS = 'osis_mpk_ibadah_settings_v3';
 const STORAGE_KEY_CHECKS = 'osis_mpk_ibadah_checks_v3';
 const STORAGE_KEY_LOGS = 'osis_mpk_ibadah_logs_v3';
 const STORAGE_KEY_CURRENT_USER = 'osis_mpk_ibadah_current_user_v3';
+const STORAGE_KEY_PASSWORDS = 'osis_mpk_ibadah_passwords_v3';
 
-// 39 ANGGOTA ASLI SESUAI REKAP MONITORING OSIS & MPK + 1 PEMBINA
+// 39 ANGGOTA ASLI SESUAI REKAP MONITORING OSIS & MPK + 2 PEMBINA
 export const DEFAULT_PROFILES: Profile[] = [
   { id: 'usr-01', nis: '2425001', nama: 'Adelia Nur Zahra', full_name: 'Adelia Nur Zahra', kelas: 'XI MP', organisasi: 'MPK', jabatan: 'Anggota MPK', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'usr-02', nis: '2425002', nama: 'A Isy Mifta Nazhilfa', full_name: 'A Isy Mifta Nazhilfa', kelas: 'X AK 1', organisasi: 'OSIS', jabatan: 'Anggota OSIS', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
@@ -61,7 +62,8 @@ export const DEFAULT_PROFILES: Profile[] = [
   { id: 'usr-37', nis: '2425037', nama: 'Syafira Aulia', full_name: 'Syafira Aulia', kelas: 'X AK 1', organisasi: 'OSIS', jabatan: 'Anggota OSIS', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'usr-38', nis: '2425038', nama: 'Zakiya Innayati', full_name: 'Zakiya Innayati', kelas: 'X BR 2', organisasi: 'OSIS', jabatan: 'Anggota OSIS', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'usr-39', nis: '2425039', nama: 'Zhiva Iqnantia Nandini', full_name: 'Zhiva Iqnantia Nandini', kelas: 'X AK 1', organisasi: 'OSIS', jabatan: 'Anggota OSIS', agama: 'islam', role: 'anggota', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: 'usr-99', nis: '19850101', nama: 'Drs. H. Mulyadi, M.Pd.', full_name: 'Drs. H. Mulyadi, M.Pd.', kelas: 'Guru Pembina', organisasi: 'OSIS', jabatan: 'Pembina OSIS & Kesiswaan', agama: 'islam', role: 'pembina', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'usr-98', nis: '19800101', nama: 'Nurkholis Aiman', full_name: 'Nurkholis Aiman', kelas: 'Guru Pembina', organisasi: 'OSIS', jabatan: 'Pembina OSIS', agama: 'islam', role: 'pembina', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'usr-99', nis: '19850202', nama: 'Maria Ulfa', full_name: 'Maria Ulfa', kelas: 'Guru Pembina', organisasi: 'MPK', jabatan: 'Pembina MPK', agama: 'islam', role: 'pembina', aktif: true, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
 ];
 
 export const DEFAULT_SETTINGS: SettingsTimeWindow[] = [
@@ -207,6 +209,96 @@ class DataService {
 
   public getProfileByNis(nis: string): Profile | undefined {
     return this.getProfiles().find((p) => p.nis.trim() === nis.trim());
+  }
+
+  public getProfileByNisOrName(query: string): Profile | undefined {
+    const q = query.trim().toLowerCase();
+    if (!q) return undefined;
+    const profiles = this.getProfiles();
+
+    // 1. Match NIS / NISN
+    let match = profiles.find((p) => p.nis.trim().toLowerCase() === q);
+    if (match) return match;
+
+    // 2. Match Exact Nama Lengkap
+    match = profiles.find((p) => 
+      (p.nama && p.nama.trim().toLowerCase() === q) || 
+      (p.full_name && p.full_name.trim().toLowerCase() === q)
+    );
+    if (match) return match;
+
+    // 3. Match Starts With
+    match = profiles.find((p) => 
+      (p.nama && p.nama.toLowerCase().startsWith(q)) || 
+      (p.full_name && p.full_name.toLowerCase().startsWith(q))
+    );
+    if (match) return match;
+
+    // 4. Match Substring
+    return profiles.find((p) => 
+      (p.nama && p.nama.toLowerCase().includes(q)) || 
+      (p.full_name && p.full_name.toLowerCase().includes(q))
+    );
+  }
+
+  public getProfileByName(name: string): Profile | undefined {
+    const q = name.trim().toLowerCase();
+    if (!q) return undefined;
+    const profiles = this.getProfiles();
+
+    // 1. Match Exact Nama Lengkap
+    let match = profiles.find((p) => 
+      (p.nama && p.nama.trim().toLowerCase() === q) || 
+      (p.full_name && p.full_name.trim().toLowerCase() === q)
+    );
+    if (match) return match;
+
+    // 2. Match Starts With
+    match = profiles.find((p) => 
+      (p.nama && p.nama.toLowerCase().startsWith(q)) || 
+      (p.full_name && p.full_name.toLowerCase().startsWith(q))
+    );
+    if (match) return match;
+
+    // 3. Match Substring
+    return profiles.find((p) => 
+      (p.nama && p.nama.toLowerCase().includes(q)) || 
+      (p.full_name && p.full_name.toLowerCase().includes(q))
+    );
+  }
+
+  public searchProfilesByName(query: string, limit = 6): Profile[] {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return this.getProfiles()
+      .filter((p) => 
+        (p.nama && p.nama.toLowerCase().includes(q)) ||
+        (p.full_name && p.full_name.toLowerCase().includes(q))
+      )
+      .slice(0, limit);
+  }
+
+  public getPasswords(): Record<string, string> {
+    return this.getItem<Record<string, string>>(STORAGE_KEY_PASSWORDS, {});
+  }
+
+  public setPassword(userId: string, newPass: string): void {
+    const map = this.getPasswords();
+    map[userId] = newPass;
+    this.setItem(STORAGE_KEY_PASSWORDS, map);
+  }
+
+  public verifyPassword(user: Profile, passInput: string): boolean {
+    const trimmed = passInput.trim();
+    if (!trimmed) return false;
+    const map = this.getPasswords();
+    const stored = map[user.id];
+    if (stored) {
+      return stored === trimmed;
+    }
+    // Default password jika belum pernah diubah:
+    // Password resmi: 'osismpka17' (fallback fleksibel '123456', 'osis17', atau nomor NIS-nya)
+    return trimmed === 'osismpka17' || trimmed === '123456' || trimmed === 'osis17' || trimmed === user.nis;
   }
 
   public getCurrentUser(): Profile | null {

@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     const today = getServerDateWIB();
 
     let dari = searchParams.get('dari');
-    let sampai = searchParams.get('sampai') || today;
+    const sampai = searchParams.get('sampai') || today;
 
     if (!dari) {
       if (periode === 'harian') {

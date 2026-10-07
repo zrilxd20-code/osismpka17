@@ -2,13 +2,13 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Pencatatan Ibadah OSIS & MPK',
-  description: 'Sistem presensi ibadah mandiri sholat dzuhur dan pendalaman iman bagi pengurus OSIS & MPK SMAN 17',
-  applicationName: 'Presensi Ibadah OM17',
+  title: 'Presensi Ibadah A17 - OSIS & MPK SMKN 17',
+  description: 'Sistem presensi ibadah mandiri sholat dzuhur dan pendalaman iman bagi pengurus OSIS & MPK SMKN 17 (Divisi Keagamaan A17)',
+  applicationName: 'Presensi Ibadah A17 SMKN 17',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Presensi Ibadah OM17',
+    title: 'Presensi A17 SMKN 17',
   },
 };
 

@@ -73,7 +73,7 @@ export function exportToPDF(
   data: PresensiIbadah[],
   periodeText: string = 'Rekapitulasi Ibadah',
   kordinatorName: string = 'Fadhil Pratama',
-  pembinaName: string = 'Drs. H. Mulyadi, M.Pd.'
+  pembinaName: string = 'Nurkholis Aiman / Maria Ulfa'
 ): void {
   const doc = new jsPDF({
     orientation: 'landscape',
@@ -81,9 +81,9 @@ export function exportToPDF(
     format: 'a4',
   });
 
-  doc.setFontSize(16);
+  doc.setFontSize(15);
   doc.setFont('helvetica', 'bold');
-  doc.text('DIVISI KEAGAMAAN OSIS & MPK', 148, 15, { align: 'center' });
+  doc.text('DIVISI KEAGAMAAN (A17) OSIS & MPK SMKN 17 JAKARTA', 148, 15, { align: 'center' });
 
   doc.setFontSize(13);
   doc.text('LAPORAN PRESENSI IBADAH ANGGOTA', 148, 22, { align: 'center' });

@@ -7,7 +7,7 @@ import Navbar from '@/components/Navbar';
 import AnggotaView from '@/components/AnggotaView';
 import PengurusView from '@/components/PengurusView';
 import PembinaView from '@/components/PembinaView';
-import { LogIn, KeyRound, Sparkles, User, RefreshCw, Lock, ShieldCheck, ToggleLeft, ToggleRight, CheckCircle2 } from 'lucide-react';
+import { Sparkles, LogIn, RefreshCw } from 'lucide-react';
 
 export default function HomePage() {
   const [currentUser, setCurrentUser] = useState<Profile | null>(null);
@@ -15,10 +15,11 @@ export default function HomePage() {
   const [refreshKey, setRefreshKey] = useState<number>(0);
   const [isDemoMode, setIsDemoMode] = useState<boolean>(true);
 
-  // Login form state
-  const [nisInput, setNisInput] = useState<string>('');
+  // Login form state (Hanya Nama Panjang & Password)
+  const [nameInput, setNameInput] = useState<string>('');
   const [passwordInput, setPasswordInput] = useState<string>('');
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState<boolean>(true);
 
   useEffect(() => {
     setIsClient(true);
@@ -66,20 +67,34 @@ export default function HomePage() {
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
-    const trimmedNis = nisInput.trim();
-    if (!trimmedNis) {
-      setLoginError('Nomor Induk Siswa (NIS) wajib diisi.');
+    const trimmedName = nameInput.trim();
+    const trimmedPass = passwordInput.trim();
+
+    if (!trimmedName) {
+      setLoginError('Nama panjang wajib diisi.');
       return;
     }
 
-    const found = dataService.getProfileByNis(trimmedNis);
-    if (found) {
-      handleSelectUser(found);
-      setNisInput('');
-      setPasswordInput('');
-    } else {
-      setLoginError('NIS tidak ditemukan dalam daftar anggota OSIS & MPK.');
+    if (!trimmedPass) {
+      setLoginError('Kata sandi wajib diisi (Default: osismpka17).');
+      return;
     }
+
+    const found = dataService.getProfileByName(trimmedName);
+    if (!found) {
+      setLoginError('Nama tidak ditemukan dalam daftar anggota OSIS & MPK. Silakan periksa ejaan nama.');
+      return;
+    }
+
+    const isMatch = dataService.verifyPassword(found, trimmedPass);
+    if (!isMatch) {
+      setLoginError('Kata sandi salah. Kata sandi default adalah: osismpka17');
+      return;
+    }
+
+    handleSelectUser(found);
+    setNameInput('');
+    setPasswordInput('');
   };
 
   const handleResetData = () => {
@@ -110,14 +125,14 @@ export default function HomePage() {
         <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-6 sm:p-8 border border-slate-100 space-y-6 animate-in fade-in duration-300">
           {/* Header & Logo */}
           <div className="text-center space-y-2">
-            <div className="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 items-center justify-center text-white shadow-lg shadow-emerald-500/25">
-              <span className="font-black text-xl tracking-wider">OM17</span>
+            <div className="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 items-center justify-center text-white shadow-lg shadow-emerald-500/25" title="A17: Divisi Agama SMKN 17">
+              <span className="font-black text-xl tracking-wider">A17</span>
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              Presensi Ibadah OSIS & MPK
+              Presensi Ibadah OSIS & MPK SMKN 17
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 font-medium">
-              Sholat Dzuhur Berjamaah & Pendalaman Iman Kristen
+              Divisi Agama (A17) • Sholat Dzuhur & Pendalaman Iman
             </p>
           </div>
 
@@ -139,36 +154,78 @@ export default function HomePage() {
             </button>
           </div>
 
-          {/* Form Login Mandiri */}
+          {/* Form Login Mandiri (Nama Panjang & Password) */}
           <form onSubmit={handleLoginSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Nomor Induk Siswa (NIS)
+            <div className="relative">
+              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                <span>Nama Panjang</span>
+                <span className="text-[10px] text-emerald-600 font-medium">Ketik nama lengkap</span>
               </label>
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Ketik NIS Anda (contoh: 2425003)"
-                  value={nisInput}
-                  onChange={(e) => setNisInput(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 bg-slate-50 font-mono"
+                  placeholder="Ketik Nama Panjang (contoh: Muhammad Faris)"
+                  value={nameInput}
+                  onChange={(e) => {
+                    setNameInput(e.target.value);
+                    setShowSuggestions(true);
+                  }}
+                  onFocus={() => setShowSuggestions(true)}
+                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 bg-slate-50 font-medium"
                   required
                 />
               </div>
+
+              {/* Rekomendasi Nama Siswa Otomatis saat mengetik */}
+              {nameInput.trim().length >= 2 && showSuggestions && (() => {
+                const results = dataService.searchProfilesByName(nameInput, 5);
+                if (results.length === 0) return null;
+                return (
+                  <div className="absolute z-30 left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden divide-y divide-slate-100 max-h-56 overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
+                    <div className="p-2 bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Pilih Nama Anggota:
+                    </div>
+                    {results.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          setNameInput(p.full_name || p.nama);
+                          setShowSuggestions(false);
+                        }}
+                        className="w-full px-3.5 py-2.5 text-left hover:bg-emerald-50 flex items-center justify-between text-xs transition-colors group"
+                      >
+                        <div className="min-w-0 pr-2">
+                          <div className="font-bold text-slate-800 truncate group-hover:text-emerald-700">
+                            {p.full_name || p.nama}
+                          </div>
+                          <div className="text-[10px] text-slate-400 truncate">
+                            {p.organisasi} • {p.kelas}
+                          </div>
+                        </div>
+                        <span className="shrink-0 text-[10px] font-bold text-emerald-700 bg-emerald-100 group-hover:bg-emerald-200 px-2.5 py-1 rounded-lg">
+                          Pilih
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
                 <span>Kata Sandi</span>
-                <span className="text-[10px] text-slate-400 font-normal">Default: Sesuai NIS</span>
+                <span className="text-[10px] text-emerald-600 font-medium">Default: osismpka17</span>
               </label>
               <div className="relative">
                 <input
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="Ketik kata sandi (default: osismpka17)"
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
                   className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 bg-slate-50 font-mono"
+                  required
                 />
               </div>
             </div>
@@ -228,17 +285,27 @@ export default function HomePage() {
                 </button>
               </div>
 
-              <button
-                onClick={() => handleSelectUser(DEFAULT_PROFILES[39] || DEFAULT_PROFILES[DEFAULT_PROFILES.length - 1])}
-                className="w-full p-2.5 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-900 font-bold text-center transition-all text-xs"
-              >
-                Masuk sebagai Pembina: Drs. H. Mulyadi, M.Pd.
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => handleSelectUser(DEFAULT_PROFILES[39])}
+                  className="p-2.5 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-900 font-bold text-center transition-all text-xs"
+                >
+                  <div className="text-[10px] text-purple-600 uppercase">Pembina OSIS</div>
+                  <div className="truncate">Nurkholis Aiman</div>
+                </button>
+                <button
+                  onClick={() => handleSelectUser(DEFAULT_PROFILES[40])}
+                  className="p-2.5 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-900 font-bold text-center transition-all text-xs"
+                >
+                  <div className="text-[10px] text-purple-600 uppercase">Pembina MPK</div>
+                  <div className="truncate">Maria Ulfa</div>
+                </button>
+              </div>
             </div>
           )}
 
           <div className="text-center text-[11px] text-slate-400">
-            Divisi Keagamaan OSIS & MPK SMAN 17 • Waktu Server: WIB (UTC+7)
+            Divisi Keagamaan (A17) OSIS & MPK SMKN 17 • Waktu Server: WIB (UTC+7)
           </div>
         </div>
       </div>
@@ -318,16 +385,26 @@ export default function HomePage() {
                 Anggota (Kristen)
               </button>
 
-              {/* Tombol Pembina (Drs. H. Mulyadi) */}
+              {/* Tombol Pembina (Nurkholis Aiman & Maria Ulfa) */}
               <button
-                onClick={() => handleSelectUser(DEFAULT_PROFILES[39] || DEFAULT_PROFILES[DEFAULT_PROFILES.length - 1])}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
-                  currentUser.role === 'pembina'
+                onClick={() => handleSelectUser(DEFAULT_PROFILES[39])}
+                className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                  currentUser.id === DEFAULT_PROFILES[39]?.id
                     ? 'bg-purple-300 text-purple-950 shadow-xs'
                     : 'bg-purple-900/70 hover:bg-purple-800 text-purple-100'
                 }`}
               >
-                Pembina
+                Pembina (Nurkholis)
+              </button>
+              <button
+                onClick={() => handleSelectUser(DEFAULT_PROFILES[40])}
+                className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                  currentUser.id === DEFAULT_PROFILES[40]?.id
+                    ? 'bg-purple-300 text-purple-950 shadow-xs'
+                    : 'bg-purple-900/70 hover:bg-purple-800 text-purple-100'
+                }`}
+              >
+                Pembina (Maria Ulfa)
               </button>
 
               {/* Reset data seed */}

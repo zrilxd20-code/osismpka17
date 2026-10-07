@@ -27,7 +27,6 @@ import {
   SlidersHorizontal,
   History,
   UserPlus,
-  ShieldCheck,
   Check,
   X,
   Sparkles,
@@ -45,14 +44,13 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
 
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [presensiList, setPresensiList] = useState<PresensiIbadah[]>([]);
-  const [settings, setSettings] = useState<SettingsTimeWindow[]>([]);
-  const [randomChecks, setRandomChecks] = useState<RandomCheckRecord[]>([]);
+  const [_settings, setSettings] = useState<SettingsTimeWindow[]>([]);
+  const [_randomChecks, setRandomChecks] = useState<RandomCheckRecord[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
 
   // Filters for Monitoring
   const [selectedDate, setSelectedDate] = useState<string>(getTodayWIB());
   const [filterOrg, setFilterOrg] = useState<string>('semua');
-  const [filterKelas, setFilterKelas] = useState<string>('semua');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Pelanggaran Modal State
@@ -70,7 +68,6 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
 
   // Random Check State
   const [randomIbadah, setRandomIbadah] = useState<IbadahType>('sholat_dzuhur');
-  const [randomCount, setRandomCount] = useState<number>(3);
   const [activeRandomCheck, setActiveRandomCheck] = useState<RandomCheckRecord | null>(null);
 
   // Settings State
@@ -155,14 +152,13 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
   const filteredPresensi = useMemo(() => {
     return selectedDatePresensi.filter((item) => {
       const matchOrg = filterOrg === 'semua' || item.profile?.organisasi === filterOrg;
-      const matchKelas = filterKelas === 'semua' || item.profile?.kelas === filterKelas;
       const matchSearch =
         !searchQuery.trim() ||
         (item.profile?.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
         (item.profile?.nis.includes(searchQuery) ?? false);
-      return matchOrg && matchKelas && matchSearch;
+      return matchOrg && matchSearch;
     });
-  }, [selectedDatePresensi, filterOrg, filterKelas, searchQuery]);
+  }, [selectedDatePresensi, filterOrg, searchQuery]);
 
   // Summary Metrics
   const stats = useMemo(() => {
@@ -464,7 +460,7 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
                 <input
                   type="text"
-                  placeholder="Cari nama atau NIS..."
+                  placeholder="Cari nama atau NISN..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs w-44 sm:w-56"
@@ -567,7 +563,7 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
                       <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
                         <td className="py-3 px-3">
                           <div className="font-bold text-slate-900">{item.profile?.full_name}</div>
-                          <div className="text-[11px] text-slate-400 font-mono">NIS: {item.profile?.nis}</div>
+                          <div className="text-[11px] text-slate-400 font-mono">NISN: {item.profile?.nis}</div>
                         </td>
 
                         <td className="py-3 px-3">
@@ -860,7 +856,7 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
                     >
                       <div>
                         <div className="flex items-center justify-between">
-                          <span className="font-mono text-[10px] text-slate-400">NIS: {u.nis}</span>
+                          <span className="font-mono text-[10px] text-slate-400">NISN: {u.nis}</span>
                           <span
                             className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                               u.status_cek === 'sesuai'
@@ -958,7 +954,7 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
                     presensiList,
                     'Bulan Ini',
                     currentUser.full_name,
-                    'Drs. H. Mulyadi, M.Pd.'
+                    'Nurkholis Aiman / Maria Ulfa'
                   )
                 }
                 className="px-4 py-2.5 rounded-xl bg-rose-700 hover:bg-rose-800 text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-colors"
@@ -980,7 +976,7 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
                 <thead className="sticky top-0 bg-slate-100 text-slate-700 font-bold z-10">
                   <tr className="border-b border-slate-200">
                     <th className="py-2 px-3">Tanggal</th>
-                    <th className="py-2 px-3">NIS</th>
+                    <th className="py-2 px-3">NISN</th>
                     <th className="py-2 px-3">Nama Lengkap</th>
                     <th className="py-2 px-3">Organisasi</th>
                     <th className="py-2 px-3">Kelas</th>
@@ -1127,7 +1123,7 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
             <form onSubmit={handleAddMember} className="space-y-3 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">NIS Siswa</label>
+                  <label className="block font-bold text-slate-700 mb-1">NISN / NIS Siswa</label>
                   <input
                     type="text"
                     value={newNis}

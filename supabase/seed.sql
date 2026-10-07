@@ -56,7 +56,8 @@ VALUES
     ('00000000-0000-0000-0000-000000000037', '2425037', 'Syafira Aulia', 'X AK 1', 'Anggota OSIS', 'islam', 'anggota', true, true),
     ('00000000-0000-0000-0000-000000000038', '2425038', 'Zakiya Innayati', 'X BR 2', 'Anggota OSIS', 'islam', 'anggota', true, true),
     ('00000000-0000-0000-0000-000000000039', '2425039', 'Zhiva Iqnantia Nandini', 'X AK 1', 'Anggota OSIS', 'islam', 'anggota', true, true),
-    ('99999999-9999-9999-9999-999999999999', '19850101', 'Drs. H. Mulyadi, M.Pd.', 'Guru Pembina', 'Pembina OSIS & Kesiswaan', 'islam', 'pembina', true, false)
+    ('99999999-9999-9999-9999-999999999998', '19800101', 'Nurkholis Aiman', 'Guru Pembina', 'Pembina OSIS', 'islam', 'pembina', true, false),
+    ('99999999-9999-9999-9999-999999999999', '19850202', 'Maria Ulfa', 'Guru Pembina', 'Pembina MPK', 'islam', 'pembina', true, false)
 ON CONFLICT (nis) DO UPDATE SET
     nama = EXCLUDED.nama,
     kelas = EXCLUDED.kelas,

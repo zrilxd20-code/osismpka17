@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Profile, PresensiIbadah, SettingsTimeWindow, IbadahType, PresensiStatus } from '@/types/database';
 import { dataService } from '@/lib/data-service';
 import { getTodayWIB, formatTanggalIndonesia, formatJamWIB, isWithinTimeWindow } from '@/lib/time-utils';
@@ -44,7 +44,7 @@ export default function AnggotaView({ currentUser, onRefreshData }: AnggotaViewP
   }, [currentUser.agama]);
 
   const ibadahLabel = ibadahType === 'sholat_dzuhur' ? 'Sholat Dzuhur Berjamaah' : 'Pendalaman Iman Kristen/Katolik';
-  const lokasiLabel = ibadahType === 'sholat_dzuhur' ? 'Musholla Utama SMAN' : 'Ruang Kerohanian Kristen/Katolik';
+  const lokasiLabel = ibadahType === 'sholat_dzuhur' ? 'Musholla Utama SMKN 17' : 'Ruang Kerohanian Kristen/Katolik';
 
   const currentSetting = useMemo(() => {
     return settings.find((s) => s.ibadah === ibadahType);
@@ -62,7 +62,7 @@ export default function AnggotaView({ currentUser, onRefreshData }: AnggotaViewP
   }, [currentSetting, bypassTime]);
 
   // Muat data saat currentUser berubah
-  const loadData = () => {
+  const loadData = useCallback(() => {
     const today = getTodayWIB();
     const allSettings = dataService.getSettings();
     setSettings(allSettings);
@@ -72,12 +72,12 @@ export default function AnggotaView({ currentUser, onRefreshData }: AnggotaViewP
 
     const todayCheck = userHistory.find((p) => p.tanggal === today && p.ibadah === ibadahType);
     setTodayPresensi(todayCheck || null);
-  };
+  }, [currentUser.id, ibadahType]);
 
   useEffect(() => {
     loadData();
     setFeedback(null);
-  }, [currentUser, ibadahType]);
+  }, [loadData]);
 
   const handleSubmitCheckin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,7 +164,7 @@ export default function AnggotaView({ currentUser, onRefreshData }: AnggotaViewP
             {formatTanggalIndonesia(getTodayWIB())}
           </span>
           <span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-[11px]">
-            NIS: {currentUser.nis}
+            NISN: {currentUser.nis}
           </span>
         </div>
       </div>
