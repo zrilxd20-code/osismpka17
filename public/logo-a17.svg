@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Logo A17 Divisi Agama SMKN 17">
+  <defs>
+    <linearGradient id="a17-shield" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#10b981"/>
+      <stop offset=".55" stop-color="#059669"/>
+      <stop offset="1" stop-color="#065f46"/>
+    </linearGradient>
+    <linearGradient id="a17-gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f6e27a"/>
+      <stop offset=".5" stop-color="#d4af37"/>
+      <stop offset="1" stop-color="#a67c00"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Shield -->
+  <path d="M128 8 L218 42 V126 C218 184 176 224 128 248 C80 224 38 184 38 126 V42 Z"
+        fill="url(#a17-shield)" stroke="url(#a17-gold)" stroke-width="6"/>
+  <path d="M128 20 L206 49 V125 C206 174 170 210 128 232 C86 210 50 174 50 125 V49 Z"
+        fill="none" stroke="url(#a17-gold)" stroke-width="2.5" opacity=".9"/>
+
+  <!-- Crescent moon -->
+  <circle cx="128" cy="62" r="17" fill="#ffffff"/>
+  <circle cx="135" cy="57" r="14" fill="#0a7a55"/>
+  <!-- 8-point star -->
+  <path d="M156 46 l3.2 3.2 4.5 0 -0 4.5 3.2 3.2 -3.2 3.2 0 4.5 -4.5 0 -3.2 3.2 -3.2 -3.2 -4.5 0 0 -4.5 -3.2 -3.2 3.2 -3.2 0 -4.5 4.5 0 Z"
+        fill="none" stroke="url(#a17-gold)" stroke-width="3" stroke-linejoin="round"/>
+
+  <!-- A17 monogram -->
+  <text x="128" y="152" text-anchor="middle"
+        font-family="Arial, Helvetica, sans-serif" font-size="76" font-weight="900" letter-spacing="-2"
+        fill="#ffffff" stroke="url(#a17-gold)" stroke-width="2.5" paint-order="stroke">A17</text>
+
+  <!-- Wordmark -->
+  <text x="128" y="182" text-anchor="middle"
+        font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="900" letter-spacing="1"
+        fill="url(#a17-gold)">A17</text>
+  <text x="128" y="202" text-anchor="middle"
+        font-family="Arial, Helvetica, sans-serif" font-size="16.5" font-weight="800" letter-spacing="1.5"
+        fill="#ffffff">DIVISI AGAMA</text>
+  <text x="128" y="219" text-anchor="middle"
+        font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="700" letter-spacing="1"
+        fill="#d1fae5">SMKN 17 JAKARTA</text>
+</svg>

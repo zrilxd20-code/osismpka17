@@ -68,6 +68,7 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
 
   // Random Check State
   const [randomIbadah, setRandomIbadah] = useState<IbadahType>('sholat_dzuhur');
+  const [randomCount, setRandomCount] = useState<number>(3);
   const [activeRandomCheck, setActiveRandomCheck] = useState<RandomCheckRecord | null>(null);
 
   // Settings State
@@ -826,6 +827,16 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
                 >
                   <option value="sholat_dzuhur">Sholat Dzuhur (Islam)</option>
                   <option value="pendalaman_iman">Pendalaman Iman (Kristen)</option>
+                </select>
+
+                <select
+                  value={randomCount}
+                  onChange={(e) => setRandomCount(Number(e.target.value))}
+                  className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold bg-slate-50"
+                >
+                  <option value={3}>3 Anggota</option>
+                  <option value={5}>5 Anggota</option>
+                  <option value={10}>10 Anggota</option>
                 </select>
 
                 <button
