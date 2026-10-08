@@ -5,6 +5,10 @@ export const metadata: Metadata = {
   title: 'Presensi Ibadah A17 - OSIS & MPK SMKN 17',
   description: 'Sistem presensi ibadah mandiri sholat dzuhur dan pendalaman iman bagi pengurus OSIS & MPK SMKN 17 (Divisi Keagamaan A17)',
   applicationName: 'Presensi Ibadah A17 SMKN 17',
+  icons: {
+    icon: '/logo-a17.jpg',
+    apple: '/logo-a17.jpg',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',

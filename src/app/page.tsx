@@ -7,6 +7,7 @@ import Navbar from '@/components/Navbar';
 import AnggotaView from '@/components/AnggotaView';
 import PengurusView from '@/components/PengurusView';
 import PembinaView from '@/components/PembinaView';
+import Image from 'next/image';
 import { Sparkles, LogIn, RefreshCw } from 'lucide-react';
 
 export default function HomePage() {
@@ -125,8 +126,17 @@ export default function HomePage() {
         <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-6 sm:p-8 border border-slate-100 space-y-6 animate-in fade-in duration-300">
           {/* Header & Logo */}
           <div className="text-center space-y-2">
-            <div className="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 items-center justify-center text-white shadow-lg shadow-emerald-500/25" title="A17: Divisi Agama SMKN 17">
-              <span className="font-black text-xl tracking-wider">A17</span>
+            <div className="flex justify-center mb-2">
+              <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-3xl overflow-hidden shadow-xl shadow-emerald-950/20 ring-4 ring-emerald-500/20 bg-slate-900 flex items-center justify-center transition-transform hover:scale-105" title="A17: Divisi Agama SMKN 17">
+                <Image
+                  src="/logo-a17.jpg"
+                  alt="Logo A17 Divisi Agama SMKN 17"
+                  width={96}
+                  height={96}
+                  priority
+                  className="w-full h-full object-cover"
+                />
+              </div>
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
               Presensi Ibadah OSIS & MPK SMKN 17

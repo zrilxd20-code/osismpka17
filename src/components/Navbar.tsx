@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { Profile } from '@/types/database';
 import { getCurrentTimeWIB } from '@/lib/time-utils';
 import { DEFAULT_PROFILES, dataService } from '@/lib/data-service';
@@ -102,8 +103,14 @@ export default function Navbar({ currentUser, onSelectUser, onLogout, isDemoMode
           <div className="flex items-center justify-between h-16">
             {/* Logo & App Name */}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center text-white shadow-md shadow-emerald-500/20" title="A17: Divisi Agama SMKN 17">
-                <span className="font-extrabold text-sm tracking-wider">A17</span>
+              <div className="w-10 h-10 rounded-xl overflow-hidden shadow-md shadow-emerald-500/20 ring-1 ring-emerald-400/30 shrink-0 bg-slate-900 flex items-center justify-center" title="A17: Divisi Agama SMKN 17">
+                <Image
+                  src="/logo-a17.jpg"
+                  alt="Logo A17"
+                  width={40}
+                  height={40}
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div>
                 <h1 className="text-base sm:text-lg font-bold text-slate-900 leading-tight">
