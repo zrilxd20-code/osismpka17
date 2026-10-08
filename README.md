@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Presensi Ibadah A17 — OSIS & MPK SMKN 17
 
-## Getting Started
+Sistem presensi ibadah mandiri (sholat dzuhur & pendalaman iman) untuk pengurus OSIS & MPK SMKN 17 — Divisi Keagamaan A17.
 
-First, run the development server:
+Stack: **Next.js 16 (App Router) + Supabase (Postgres, Auth, RLS) + Tailwind CSS 4**
+
+## Jalankan lokal
 
 ```bash
+npm install
+cp .env.example .env.local  # isi kredensial Supabase
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Env | Keterangan |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Project URL Supabase |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Anon public key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role — **server only, jangan expose** |
+| `NEXT_PUBLIC_DEMO_MODE` | `true` = data mock lokal, `false` = live Supabase |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Setup database
 
-## Learn More
+1. Buat project di Supabase Dashboard
+2. SQL Editor → jalankan `supabase/migrations/20261003_init_backend.sql`
+3. (Opsional) jalankan `supabase/seed.sql` untuk data awal
 
-To learn more about Next.js, take a look at the following resources:
+## Test backend
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+node scripts/test-endpoints.mjs
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deploy ke Vercel
 
-## Deploy on Vercel
+1. Push ke GitHub (`master` → `origin`)
+2. Vercel → Add New → Project → pilih repo `osismpka17`
+3. Tambahkan Environment Variables:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `NEXT_PUBLIC_DEMO_MODE=false`
+4. Deploy. Domain sementara: `https://osismpka17.vercel.app`
+5. Custom domain (nanti): Vercel → Settings → Domains → Add → ikuti instruksi DNS.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Panduan lengkap: lihat `SETUP_DEPLOY_GUIDE.md`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Keamanan
+
+- `.env.local` tidak pernah di-commit (sudah di `.gitignore`)
+- `SUPABASE_SERVICE_ROLE_KEY` hanya dipakai di Route Handler server (`src/lib/supabase/server.ts`)
+- RLS: anggota hanya insert milik sendiri, pengurus full akses, pembina read-only
