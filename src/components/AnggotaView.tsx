@@ -41,7 +41,6 @@ export default function AnggotaView({ currentUser, onRefreshData }: AnggotaViewP
   // Form State
   const [status, setStatus] = useState<PresensiStatus>('hadir');
   const [keteranganHalangan, setKeteranganHalangan] = useState<string>('');
-  const [saksi, setSaksi] = useState<string>('');
   const [bypassTime, setBypassTime] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -129,7 +128,6 @@ export default function AnggotaView({ currentUser, onRefreshData }: AnggotaViewP
         ibadah: ibadahType,
         status,
         keteranganHalangan: status === 'izin_halangan' ? keteranganHalangan : undefined,
-        saksi: saksi.trim() ? saksi.trim() : undefined,
         bypassTimeCheck: bypassTime,
       });
 
@@ -337,12 +335,7 @@ export default function AnggotaView({ currentUser, onRefreshData }: AnggotaViewP
                 </span>
               </div>
 
-              {todayPresensi.saksi && (
-                <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
-                  <span className="text-slate-500">Rekan / Saksi Ibadah</span>
-                  <span className="font-semibold text-slate-800">{todayPresensi.saksi}</span>
-                </div>
-              )}
+
 
               {todayPresensi.catatan_pengurus && (
                 <div className="pt-1.5">
@@ -527,34 +520,7 @@ export default function AnggotaView({ currentUser, onRefreshData }: AnggotaViewP
               </div>
             )}
 
-            {/* Kolom Saksi (Opsional) */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                {hariDetail.isJumat ? 'Nama Rekan Sholat Jumat / Teman Satu Shaf' : 'Nama Teman / Saksi'}{' '}
-                <span className="text-slate-400 font-normal lowercase">(opsional)</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                  <UserCheck className="w-4 h-4" />
-                </div>
-                <input
-                  type="text"
-                  value={saksi}
-                  onChange={(e) => setSaksi(e.target.value)}
-                  placeholder={
-                    hariDetail.isJumat
-                      ? 'mis. Nama teman sholat Jumat di masjid / pengurus satu shaf'
-                      : 'Nama rekan yang beribadah bersama Anda'
-                  }
-                  className="w-full text-xs pl-9 pr-3 py-3 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 bg-white"
-                />
-              </div>
-              <p className="text-[11px] text-slate-400 mt-1">
-                {hariDetail.isJumat
-                  ? 'Membantu pengurus keagamaan memverifikasi kehadiran sholat Jumat.'
-                  : 'Membantu pengurus keagamaan dalam memverifikasi kehadiran.'}
-              </p>
-            </div>
+
 
             {/* TOMBOL BESAR SATU KETUKAN (Sesuai Syarat Utama) */}
             <div className="pt-2">
@@ -640,7 +606,6 @@ export default function AnggotaView({ currentUser, onRefreshData }: AnggotaViewP
 
                   <div className="text-[11px] text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
                     <span>Jam: {formatJamWIB(item.waktu_checkin)}</span>
-                    {item.saksi && <span>• Saksi: {item.saksi}</span>}
                     {item.keterangan_halangan && (
                       <span>• Alasan: {item.keterangan_halangan}</span>
                     )}

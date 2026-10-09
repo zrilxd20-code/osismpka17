@@ -103,6 +103,9 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
   const [isCloudSyncing, setIsCloudSyncing] = useState<boolean>(false);
   const [lastSyncTime, setLastSyncTime] = useState<string>('');
 
+  // Rekap Export Filter State (Per Hari / Per Minggu / Per Bulan / Semua)
+  const [rekapPeriod, setRekapPeriod] = useState<'hari_ini' | 'minggu_ini' | 'bulan_ini' | 'semua'>('bulan_ini');
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
@@ -244,6 +247,45 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
 
     return { total, hadir, izin, tidakHadir, pendingVerif, belum, percentHadir };
   }, [activeMembers, selectedDatePresensi, uncheckinMembers]);
+
+  // Data Rekapitulasi Berdasarkan Periode Terpilih (Per Hari / Minggu / Bulan / Semua)
+  const rekapData = useMemo(() => {
+    const today = getTodayWIB();
+    if (rekapPeriod === 'hari_ini') {
+      const list = presensiList.filter((p) => p.tanggal === today);
+      return {
+        list,
+        label: `Per Hari (${formatTanggalIndonesia(today)})`,
+        fileSuffix: `Harian_${today}`,
+      };
+    }
+    if (rekapPeriod === 'minggu_ini') {
+      const todayDate = new Date(today);
+      const sevenDaysAgo = new Date(todayDate);
+      sevenDaysAgo.setDate(todayDate.getDate() - 7);
+      const minDateStr = sevenDaysAgo.toISOString().slice(0, 10);
+      const list = presensiList.filter((p) => p.tanggal >= minDateStr && p.tanggal <= today);
+      return {
+        list,
+        label: `Per Minggu (7 Hari: ${minDateStr} s/d ${today})`,
+        fileSuffix: `Mingguan_${minDateStr}_sd_${today}`,
+      };
+    }
+    if (rekapPeriod === 'bulan_ini') {
+      const yearMonth = today.slice(0, 7);
+      const list = presensiList.filter((p) => p.tanggal.startsWith(yearMonth));
+      return {
+        list,
+        label: `Per Bulan (${yearMonth})`,
+        fileSuffix: `Bulanan_${yearMonth}`,
+      };
+    }
+    return {
+      list: presensiList,
+      label: 'Semua Riwayat (Kumulatif)',
+      fileSuffix: 'Semua_Riwayat',
+    };
+  }, [presensiList, rekapPeriod]);
 
   // Aksi Verifikasi
   const handleVerify = (id: string, statusVerifikasi: VerifikasiStatus, note?: string) => {
@@ -682,7 +724,7 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
                       <th className="py-2.5 px-3">Ibadah</th>
                       <th className="py-2.5 px-3">Status</th>
                       <th className="py-2.5 px-3">Waktu WIB</th>
-                      <th className="py-2.5 px-3">Saksi / Alasan</th>
+                      <th className="py-2.5 px-3">Alasan / Catatan</th>
                       <th className="py-2.5 px-3">Status Verifikasi</th>
                       <th className="py-2.5 px-3 text-right">Aksi Verifikasi</th>
                     </tr>
@@ -739,11 +781,6 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
                         </td>
 
                         <td className="py-3 px-3">
-                          {item.saksi && (
-                            <div className="text-slate-700">
-                              <span className="text-[10px] text-slate-400 font-bold">Saksi:</span> {item.saksi}
-                            </div>
-                          )}
                           {item.keterangan_halangan && (
                             <div className="text-amber-800 italic">
                               &ldquo;{item.keterangan_halangan}&rdquo;
@@ -1093,22 +1130,99 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
       {/* ============================================================== */}
       {/* TAB 4: REKAPITULASI & EKSPOR (EXCEL & PDF) */}
       {/* ============================================================== */}
+      {/* ============================================================== */}
+      {/* TAB 4: REKAPITULASI & EKSPOR (EXCEL & PDF) */}
+      {/* ============================================================== */}
       {activeTab === 'rekap' && (
         <div className="space-y-6">
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          {/* PILIHAN PERIODE REKAP (HARIAN, MINGGUAN, BULANAN, SEMUA) */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h3 className="font-bold text-base text-slate-900">
-                Ekspor Laporan Presensi Ibadah
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Download rekapitulasi kehadiran untuk arsip divisi keagamaan dan laporan ke pembina kesiswaan.
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-emerald-600" />
+                <h3 className="font-bold text-base text-slate-900">
+                  Pilih Rentang Periode Laporan
+                </h3>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                Data yang diekspor ke Excel maupun PDF akan disesuaikan dengan periode yang Anda pilih di bawah:
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 flex-wrap">
               <button
-                onClick={() => exportToExcel(presensiList, `Rekap_Ibadah_OSIS_MPK`)}
-                className="px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-colors"
+                type="button"
+                onClick={() => setRekapPeriod('hari_ini')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  rekapPeriod === 'hari_ini'
+                    ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-600/30'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                📅 Per Hari (Hari Ini)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setRekapPeriod('minggu_ini')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  rekapPeriod === 'minggu_ini'
+                    ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-600/30'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                🗓️ Per Minggu (7 Hari)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setRekapPeriod('bulan_ini')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  rekapPeriod === 'bulan_ini'
+                    ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-600/30'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                📊 Per Bulan (Bulan Ini)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setRekapPeriod('semua')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  rekapPeriod === 'semua'
+                    ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-600/30'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                📁 Semua Riwayat
+              </button>
+            </div>
+          </div>
+
+          {/* KARTU UNDUH BERKAS RESMI */}
+          <div className="bg-slate-900 text-white rounded-3xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  {rekapData.label}
+                </span>
+                <span className="text-xs text-slate-400 font-medium">
+                  • {rekapData.list.length} baris data ditemukan
+                </span>
+              </div>
+              <h4 className="text-lg font-black text-white mt-1.5">
+                Unduh Rekapitulasi Presensi
+              </h4>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Format Excel (.xlsx) cocok untuk olah data lanjut, dan format PDF resmi sudah dilengkapi kop surat dan kolom tanda tangan.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2.5 shrink-0">
+              <button
+                onClick={() => exportToExcel(rekapData.list, `Rekap_Ibadah_OSIS_MPK_${rekapData.fileSuffix}`)}
+                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-all cursor-pointer"
               >
                 <FileSpreadsheet className="w-4 h-4" />
                 <span>Unduh Excel (.xlsx)</span>
@@ -1117,13 +1231,13 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
               <button
                 onClick={() =>
                   exportToPDF(
-                    presensiList,
-                    'Bulan Ini',
+                    rekapData.list,
+                    rekapData.label,
                     currentUser.full_name,
                     'Nurkholis Aiman / Maria Ulfa'
                   )
                 }
-                className="px-4 py-2.5 rounded-xl bg-rose-700 hover:bg-rose-800 text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-colors"
+                className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-95 text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-all cursor-pointer"
               >
                 <FileText className="w-4 h-4" />
                 <span>Cetak / Ekspor PDF</span>
@@ -1133,68 +1247,77 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
 
           {/* TABEL REKAP RINGKASAN */}
           <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs">
-            <h4 className="font-bold text-sm text-slate-900 mb-3">
-              Pratinjau Data Presensi Keseluruhan ({presensiList.length} Catatan)
-            </h4>
-
-            <div className="overflow-x-auto max-h-96">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="sticky top-0 bg-slate-100 text-slate-700 font-bold z-10">
-                  <tr className="border-b border-slate-200">
-                    <th className="py-2 px-3">Tanggal</th>
-                    <th className="py-2 px-3">ID Anggota</th>
-                    <th className="py-2 px-3">Nama Lengkap</th>
-                    <th className="py-2 px-3">Organisasi</th>
-                    <th className="py-2 px-3">Kelas</th>
-                    <th className="py-2 px-3">Ibadah</th>
-                    <th className="py-2 px-3">Status</th>
-                    <th className="py-2 px-3">Saksi</th>
-                    <th className="py-2 px-3">Verifikasi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {presensiList.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50">
-                      <td className="py-2.5 px-3 font-mono">{item.tanggal}</td>
-                      <td className="py-2.5 px-3 font-mono">{item.profile?.nis}</td>
-                      <td className="py-2.5 px-3 font-bold text-slate-900">{item.profile?.full_name}</td>
-                      <td className="py-2.5 px-3">{item.profile?.organisasi}</td>
-                      <td className="py-2.5 px-3">{item.profile?.kelas}</td>
-                      <td className="py-2.5 px-3">
-                        {item.ibadah === 'sholat_dzuhur' ? 'Dzuhur' : 'Pend. Iman'}
-                      </td>
-                      <td className="py-2.5 px-3">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold capitalize ${
-                            item.status === 'hadir'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : item.status === 'izin_halangan'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-rose-100 text-rose-800'
-                          }`}
-                        >
-                          {item.status === 'izin_halangan' ? 'Izin' : item.status}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-3 text-slate-600">{item.saksi || '-'}</td>
-                      <td className="py-2.5 px-3">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                            item.status_verifikasi === 'pelanggaran'
-                              ? 'bg-rose-100 text-rose-800 font-black'
-                              : item.status_verifikasi === 'terverifikasi'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-sky-100 text-sky-800'
-                          }`}
-                        >
-                          {item.status_verifikasi}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-bold text-sm text-slate-900">
+                Pratinjau Data Presensi ({rekapData.label}) - {rekapData.list.length} Catatan
+              </h4>
+              <span className="text-[11px] text-slate-400">
+                Menampilkan data sesuai rentang periode aktif
+              </span>
             </div>
+
+            {rekapData.list.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 text-xs font-medium bg-slate-50 rounded-2xl border border-slate-200">
+                Tidak ada catatan presensi pada rentang {rekapData.label}.
+              </div>
+            ) : (
+              <div className="overflow-x-auto max-h-96">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="sticky top-0 bg-slate-100 text-slate-700 font-bold z-10">
+                    <tr className="border-b border-slate-200">
+                      <th className="py-2 px-3">Tanggal</th>
+                      <th className="py-2 px-3">ID Anggota</th>
+                      <th className="py-2 px-3">Nama Lengkap</th>
+                      <th className="py-2 px-3">Organisasi</th>
+                      <th className="py-2 px-3">Kelas</th>
+                      <th className="py-2 px-3">Ibadah</th>
+                      <th className="py-2 px-3">Status</th>
+                      <th className="py-2 px-3">Verifikasi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {rekapData.list.map((item) => (
+                      <tr key={item.id} className="hover:bg-slate-50">
+                        <td className="py-2.5 px-3 font-mono">{item.tanggal}</td>
+                        <td className="py-2.5 px-3 font-mono">{item.profile?.nis}</td>
+                        <td className="py-2.5 px-3 font-bold text-slate-900">{item.profile?.full_name}</td>
+                        <td className="py-2.5 px-3">{item.profile?.organisasi}</td>
+                        <td className="py-2.5 px-3">{item.profile?.kelas}</td>
+                        <td className="py-2.5 px-3">
+                          {item.ibadah === 'sholat_dzuhur' ? 'Dzuhur' : 'Pend. Iman'}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold capitalize ${
+                              item.status === 'hadir'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : item.status === 'izin_halangan'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-rose-100 text-rose-800'
+                            }`}
+                          >
+                            {item.status === 'izin_halangan' ? 'Izin' : item.status}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                              item.status_verifikasi === 'pelanggaran'
+                                ? 'bg-rose-100 text-rose-800 font-black'
+                                : item.status_verifikasi === 'terverifikasi'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-sky-100 text-sky-800'
+                            }`}
+                          >
+                            {item.status_verifikasi}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1485,7 +1608,6 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
               </div>
               <div className="text-slate-500">
                 Waktu Check-In: {formatJamWIB(selectedPresensiForFlag.waktu_checkin || selectedPresensiForFlag.dibuat_pada)}
-                {selectedPresensiForFlag.saksi && ` • Saksi: ${selectedPresensiForFlag.saksi}`}
               </div>
             </div>
 

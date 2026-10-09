@@ -165,7 +165,6 @@ export default function PembinaView({ currentUser }: PembinaViewProps) {
                 <th className="py-2.5 px-3">Ibadah</th>
                 <th className="py-2.5 px-3">Status</th>
                 <th className="py-2.5 px-3">Waktu</th>
-                <th className="py-2.5 px-3">Saksi</th>
                 <th className="py-2.5 px-3">Status Verifikasi</th>
                 <th className="py-2.5 px-3">Catatan Pengurus</th>
               </tr>
@@ -198,7 +197,6 @@ export default function PembinaView({ currentUser }: PembinaViewProps) {
                     </span>
                   </td>
                   <td className="py-3 px-3 font-mono">{formatJamWIB(item.waktu_checkin)}</td>
-                  <td className="py-3 px-3 text-slate-600">{item.saksi || '-'}</td>
                   <td className="py-3 px-3">
                     <span
                       className={`px-2 py-0.5 rounded-full font-bold text-[10px] uppercase ${

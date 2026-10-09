@@ -34,7 +34,6 @@ export function exportToExcel(data: PresensiIbadah[], title: string = 'Laporan_P
       'Jenis Ibadah': (item.ibadah || item.jenis_ibadah?.nama) === 'sholat_dzuhur' ? 'Sholat Dzuhur' : 'Pendalaman Iman',
       Status: statusLabel,
       'Waktu Check-in': formatJamWIB(item.waktu_checkin || item.dibuat_pada),
-      Saksi: item.saksi || '-',
       'Status Verifikasi': verif,
       'Catatan Pengurus': item.catatan_verifikasi || item.catatan_pengurus || '-',
     };
@@ -54,7 +53,6 @@ export function exportToExcel(data: PresensiIbadah[], title: string = 'Laporan_P
     { wch: 20 }, // Jenis Ibadah
     { wch: 20 }, // Status
     { wch: 15 }, // Waktu
-    { wch: 18 }, // Saksi
     { wch: 16 }, // Verifikasi
     { wch: 30 }, // Catatan
   ];
@@ -112,7 +110,6 @@ export function exportToPDF(
       (item.ibadah || item.jenis_ibadah?.nama) === 'sholat_dzuhur' ? 'Dzuhur' : 'Pend. Iman',
       statusText,
       formatJamWIB(item.waktu_checkin || item.dibuat_pada),
-      item.saksi || '-',
       item.status_verifikasi.toUpperCase(),
       catatan,
     ];
@@ -120,7 +117,7 @@ export function exportToPDF(
 
   autoTable(doc, {
     startY: 36,
-    head: [['No', 'Tgl', 'NIS', 'Nama', 'Org', 'Kelas', 'Ibadah', 'Status', 'Jam', 'Saksi', 'Verif', 'Catatan']],
+    head: [['No', 'Tgl', 'NIS', 'Nama', 'Org', 'Kelas', 'Ibadah', 'Status', 'Jam', 'Verif', 'Catatan']],
     body: tableData,
     theme: 'grid',
     styles: {
@@ -138,17 +135,16 @@ export function exportToPDF(
     },
     columnStyles: {
       0: { halign: 'center', cellWidth: 10 },
-      1: { halign: 'center', cellWidth: 20 },
-      2: { halign: 'center', cellWidth: 18 },
-      3: { cellWidth: 40 },
-      4: { halign: 'center', cellWidth: 15 },
-      5: { halign: 'center', cellWidth: 16 },
-      6: { cellWidth: 22 },
-      7: { halign: 'center', cellWidth: 20 },
-      8: { halign: 'center', cellWidth: 20 },
-      9: { cellWidth: 25 },
-      10: { halign: 'center', cellWidth: 22 },
-      11: { cellWidth: 41 },
+      1: { halign: 'center', cellWidth: 22 },
+      2: { halign: 'center', cellWidth: 20 },
+      3: { cellWidth: 45 },
+      4: { halign: 'center', cellWidth: 16 },
+      5: { halign: 'center', cellWidth: 18 },
+      6: { cellWidth: 24 },
+      7: { halign: 'center', cellWidth: 22 },
+      8: { halign: 'center', cellWidth: 22 },
+      9: { halign: 'center', cellWidth: 25 },
+      10: { cellWidth: 45 },
     },
   });
 
