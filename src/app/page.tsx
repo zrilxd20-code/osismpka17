@@ -8,7 +8,7 @@ import AnggotaView from '@/components/AnggotaView';
 import PengurusView from '@/components/PengurusView';
 import PembinaView from '@/components/PembinaView';
 import Image from 'next/image';
-import { Sparkles, LogIn, RefreshCw } from 'lucide-react';
+import { LogIn, RefreshCw, BookOpenCheck, Clock3, MapPin } from 'lucide-react';
 
 export default function HomePage() {
   const [currentUser, setCurrentUser] = useState<Profile | null>(null);
@@ -50,10 +50,8 @@ export default function HomePage() {
     setIsDemoMode(val);
     localStorage.setItem('osis_mpk_demo_mode', String(val));
     if (!val) {
-      // Keluar dari mode demo: logout agar masuk melalui form login mandiri
       handleLogout();
     } else {
-      // Masuk kembali ke mode demo: langsung arahkan ke Al Qoirul (Pengurus)
       const def = DEFAULT_PROFILES[2];
       handleSelectUser(def);
     }
@@ -66,24 +64,24 @@ export default function HomePage() {
     const trimmedPass = passwordInput.trim();
 
     if (!trimmedName) {
-      setLoginError('Nama panjang wajib diisi.');
+      setLoginError('Isi dulu nama panjangnya sesuai daftar anggota.');
       return;
     }
 
     if (!trimmedPass) {
-      setLoginError('Kata sandi wajib diisi (Default: osismpka17).');
+      setLoginError('Isi kata sandi. Kalau belum pernah ganti, pakai: osismpka17');
       return;
     }
 
     const found = dataService.getProfileByName(trimmedName);
     if (!found) {
-      setLoginError('Nama tidak ditemukan dalam daftar anggota OSIS & MPK. Silakan periksa ejaan nama.');
+      setLoginError('Nama tidak ketemu di daftar OSIS & MPK. Cek lagi ejaannya, misalnya huruf kapital atau spasi ganda.');
       return;
     }
 
     const isMatch = dataService.verifyPassword(found, trimmedPass);
     if (!isMatch) {
-      setLoginError('Kata sandi salah. Kata sandi default adalah: osismpka17');
+      setLoginError('Kata sandinya keliru. Kata sandi awal adalah: osismpka17');
       return;
     }
 
@@ -95,7 +93,7 @@ export default function HomePage() {
   const handleResetData = () => {
     if (confirm('Kembalikan data ke awal (seed data 39 anggota asli)?')) {
       dataService.resetToDefault();
-      const def = DEFAULT_PROFILES[2]; // Al Qoirul Lathif Nazzril Putra
+      const def = DEFAULT_PROFILES[2];
       dataService.setCurrentUser(def);
       setCurrentUser(def);
       setRefreshKey((prev) => prev + 1);
@@ -104,145 +102,204 @@ export default function HomePage() {
 
   if (!isClient) {
     return (
-      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+      <div className="min-h-dvh flex items-center justify-center p-4">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs font-semibold text-slate-500">Memuat Sistem Presensi Ibadah...</p>
+          <div className="size-10 border-[3px] border-[#175e3c] border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs font-semibold text-stone-500">Membuka buku presensi…</p>
         </div>
       </div>
     );
   }
 
-  // --- HALAMAN LOGIN RESMI JIKA BELUM ADA PENGGUNA AKTIF ---
+  // --- HALAMAN LOGIN ---
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-950 flex flex-col justify-center items-center p-4">
-        <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-6 sm:p-8 border border-slate-100 space-y-6 animate-in fade-in duration-300">
-          {/* Header & Logo */}
-          <div className="text-center space-y-2">
-            <div className="flex justify-center mb-2">
-              <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-3xl overflow-hidden shadow-xl shadow-emerald-950/20 ring-4 ring-emerald-500/20 bg-slate-900 flex items-center justify-center transition-transform hover:scale-105" title="A17: Divisi Agama SMKN 17">
+      <div className="min-h-dvh flex flex-col items-center justify-center p-4 sm:p-8">
+        <div className="w-full max-w-4xl overflow-hidden rounded-xl border border-[#e3ddd0] bg-[#fffdf8] shadow-[0_1px_0_#e3ddd0] grid md:grid-cols-[1.02fr_1fr]">
+          {/* Panel kiri: identitas sekolah, solid — bukan gradien */}
+          <div className="bg-[#0f3d28] text-[#f4f1ea] p-7 sm:p-9 flex flex-col gap-6">
+            <div className="flex items-center gap-3">
+              <div className="size-14 shrink-0 overflow-hidden rounded-lg border border-white/25 bg-white">
                 <Image
                   src="/logo-a17.jpg"
                   alt="Logo A17 Divisi Agama SMKN 17"
-                  width={96}
-                  height={96}
+                  width={56}
+                  height={56}
                   priority
-                  className="w-full h-full object-cover"
+                  className="size-full object-cover"
                 />
               </div>
+              <div>
+                <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[#d9c9a3]">
+                  SMKN 17 Jakarta
+                </p>
+                <p className="text-sm font-bold leading-tight">
+                  Divisi 1 Keagamaan (A17)
+                  <span className="block text-xs font-medium text-white/70">
+                    OSIS &amp; MPK
+                  </span>
+                </p>
+              </div>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              Presensi Ibadah OSIS & MPK SMKN 17
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-500 font-medium">
-              Sistem Informasi Presensi Ibadah Mandiri (Sholat Dzuhur & Pendalaman Iman)
+
+            <div>
+              <h1 className="text-2xl sm:text-[28px] font-extrabold leading-[1.15]">
+                Buku presensi ibadah harian.
+              </h1>
+              <p className="mt-2 text-sm leading-relaxed text-white/75">
+                Catat kehadiran Sholat Dzuhur dan Pendalaman Iman tiap hari.
+                Dicatat mandiri, diverifikasi pengurus.
+              </p>
+            </div>
+
+            <dl className="rounded-lg border border-white/15 bg-white/[0.04] divide-y divide-white/10 text-sm">
+              <div className="flex items-center justify-between gap-3 px-4 py-3">
+                <dt className="flex items-center gap-2 font-semibold">
+                  <Clock3 className="size-4 text-[#d9c9a3]" />
+                  Sholat Dzuhur
+                </dt>
+                <dd className="font-mono text-xs tabular-nums text-white/85">11.30–14.00 WIB</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3 px-4 py-3">
+                <dt className="flex items-center gap-2 font-semibold">
+                  <BookOpenCheck className="size-4 text-[#d9c9a3]" />
+                  Pendalaman Iman
+                </dt>
+                <dd className="font-mono text-xs tabular-nums text-white/85">11.45–13.45 WIB</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3 px-4 py-3">
+                <dt className="flex items-center gap-2 font-semibold">
+                  <MapPin className="size-4 text-[#d9c9a3]" />
+                  Tempat
+                </dt>
+                <dd className="text-xs text-white/85 text-right">Musholla utama / Ruang kerohanian</dd>
+              </div>
+            </dl>
+
+            <p className="mt-auto border-t border-white/15 pt-4 text-xs leading-relaxed text-white/60">
+              “Yang dicatat hari ini jadi laporan pembina tiap pekannya.
+              Kalau izin, tulis keterangannya yang jelas.”
+              <span className="mt-1 block font-semibold text-white/80">— Pengurus A17</span>
             </p>
           </div>
 
-          {/* Form Login Mandiri (Nama Panjang & Password) */}
-          <form onSubmit={handleLoginSubmit} className="space-y-4">
-            <div className="relative">
-              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
-                <span>Nama Panjang</span>
-                <span className="text-[10px] text-emerald-600 font-medium">Ketik nama lengkap</span>
-              </label>
+          {/* Panel kanan: formulir */}
+          <div className="p-7 sm:p-9">
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-stone-500">
+              Masuk anggota
+            </p>
+            <h2 className="mt-1 text-xl font-extrabold text-stone-900">
+              Pakai nama panjang + kata sandi
+            </h2>
+            <p className="mt-1 text-[13px] text-stone-500">
+              Sesuai daftar 39 anggota. Kata sandi awal:{' '}
+              <code className="rounded border border-stone-200 bg-stone-100 px-1.5 py-0.5 font-mono text-xs">
+                osismpka17
+              </code>
+            </p>
+
+            <form onSubmit={handleLoginSubmit} className="mt-6 space-y-4">
               <div className="relative">
+                <label htmlFor="nama" className="mb-1.5 block text-[13px] font-bold text-stone-700">
+                  Nama panjang
+                </label>
                 <input
+                  id="nama"
                   type="text"
-                  placeholder="Ketik Nama Panjang (contoh: Muhammad Faris)"
+                  autoComplete="name"
+                  placeholder="mis. Muhammad Faris"
                   value={nameInput}
                   onChange={(e) => {
                     setNameInput(e.target.value);
                     setShowSuggestions(true);
                   }}
                   onFocus={() => setShowSuggestions(true)}
-                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 bg-slate-50 font-medium"
+                  className="h-11 w-full rounded-[10px] border border-stone-300 bg-white px-3.5 text-sm font-medium placeholder:text-stone-400"
                   required
                 />
+
+                {nameInput.trim().length >= 2 && showSuggestions && (() => {
+                  const results = dataService.searchProfilesByName(nameInput, 5);
+                  if (results.length === 0) return null;
+                  return (
+                    <div className="absolute inset-x-0 top-full z-30 mt-1.5 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
+                      <div className="bg-stone-100 px-3.5 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-stone-500">
+                        {results.length} nama cocok — pilih satu
+                      </div>
+                      <ul className="max-h-56 divide-y divide-stone-100 overflow-y-auto">
+                        {results.map((p) => (
+                          <li key={p.id}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setNameInput(p.full_name || p.nama);
+                                setShowSuggestions(false);
+                              }}
+                              className="flex w-full items-center justify-between gap-2 px-3.5 py-2.5 text-left hover:bg-stone-50"
+                            >
+                              <span className="min-w-0">
+                                <span className="block truncate text-[13px] font-bold text-stone-800">
+                                  {p.full_name || p.nama}
+                                </span>
+                                <span className="block truncate font-mono text-[11px] tabular-nums text-stone-500">
+                                  {p.organisasi} · {p.kelas}
+                                </span>
+                              </span>
+                              <span className="shrink-0 rounded-md border border-[#175e3c]/30 bg-[#e9efe7] px-2 py-1 text-[11px] font-bold text-[#175e3c]">
+                                Pilih
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })()}
               </div>
 
-              {/* Rekomendasi Nama Siswa Otomatis saat mengetik */}
-              {nameInput.trim().length >= 2 && showSuggestions && (() => {
-                const results = dataService.searchProfilesByName(nameInput, 5);
-                if (results.length === 0) return null;
-                return (
-                  <div className="absolute z-30 left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden divide-y divide-slate-100 max-h-56 overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
-                    <div className="p-2 bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      Pilih Nama Anggota:
-                    </div>
-                    {results.map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => {
-                          setNameInput(p.full_name || p.nama);
-                          setShowSuggestions(false);
-                        }}
-                        className="w-full px-3.5 py-2.5 text-left hover:bg-emerald-50 flex items-center justify-between text-xs transition-colors group"
-                      >
-                        <div className="min-w-0 pr-2">
-                          <div className="font-bold text-slate-800 truncate group-hover:text-emerald-700">
-                            {p.full_name || p.nama}
-                          </div>
-                          <div className="text-[10px] text-slate-400 truncate">
-                            {p.organisasi} • {p.kelas}
-                          </div>
-                        </div>
-                        <span className="shrink-0 text-[10px] font-bold text-emerald-700 bg-emerald-100 group-hover:bg-emerald-200 px-2.5 py-1 rounded-lg">
-                          Pilih
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                );
-              })()}
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
-                <span>Kata Sandi</span>
-                <span className="text-[10px] text-emerald-600 font-medium">Default: osismpka17</span>
-              </label>
-              <div className="relative">
+              <div>
+                <label htmlFor="sandi" className="mb-1.5 block text-[13px] font-bold text-stone-700">
+                  Kata sandi
+                </label>
                 <input
+                  id="sandi"
                   type="password"
-                  placeholder="Ketik kata sandi (default: osismpka17)"
+                  autoComplete="current-password"
+                  placeholder="Kata sandi akun"
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 bg-slate-50 font-mono"
+                  className="h-11 w-full rounded-[10px] border border-stone-300 bg-white px-3.5 font-mono text-sm placeholder:font-sans placeholder:text-stone-400"
                   required
                 />
               </div>
-            </div>
 
-            {loginError && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
-                {loginError}
-              </div>
-            )}
+              {loginError && (
+                <div role="alert" className="rounded-[10px] border border-[#9f1239]/25 border-l-4 border-l-[#9f1239] bg-[#f9e8ec] px-3.5 py-3 text-[13px] font-medium leading-relaxed text-[#7a0e2c]">
+                  {loginError}
+                </div>
+              )}
 
-            <button
-              type="submit"
-              className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold rounded-xl shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 text-sm"
-            >
-              <LogIn className="w-4 h-4" />
-              <span>Masuk ke Akun</span>
-            </button>
-          </form>
+              <button
+                type="submit"
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-[10px] bg-[#175e3c] text-sm font-bold text-white transition-colors hover:bg-[#0f3d28]"
+              >
+                <LogIn className="size-4" />
+                <span>Masuk ke buku presensi</span>
+              </button>
+            </form>
 
-          <div className="text-center pt-3 border-t border-slate-100 text-[11px] text-slate-400">
-            © 2026 Divisi 1 Keagamaan • OSIS & MPK SMKN 17 Jakarta
+            <p className="mt-6 border-t-2 border-double border-stone-300 pt-3 font-mono text-[11px] tabular-nums text-stone-400">
+              TA 2025/2026 · Divisi 1 Keagamaan · OSIS &amp; MPK SMKN 17
+            </p>
           </div>
         </div>
       </div>
     );
   }
 
-  // --- HALAMAN UTAMA DASHBOARD SETELAH PENGGUNA LOGIN ---
+  // --- HALAMAN UTAMA SETELAH LOGIN ---
   return (
-    <div className="min-h-screen flex flex-col bg-slate-100">
-      {/* Top Navigation */}
+    <div className="min-h-dvh flex flex-col">
       <Navbar
         currentUser={currentUser}
         onSelectUser={handleSelectUser}
@@ -250,113 +307,95 @@ export default function HomePage() {
         isDemoMode={isDemoMode}
       />
 
-      {/* QUICK ROLE SWITCHER RIBBON (Hanya Tampil Jika Mode Demo Aktif) */}
       {isDemoMode && (
-        <div className="bg-emerald-950 text-emerald-100 px-4 py-2 border-b border-emerald-800">
-          <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="flex h-2 w-2 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              <span className="font-bold text-white">Mode Demo:</span>
-              <span className="text-emerald-300 hidden sm:inline">Uji coba peran:</span>
-            </div>
+        <div className="border-b border-stone-800 bg-stone-900 px-4 py-2 text-stone-200">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2">
+            <p className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.12em]">
+              <span className="size-2 rounded-full bg-amber-400" />
+              Mode demo — ganti peran
+            </p>
 
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {/* Pengurus (Kamu) */}
+            <div className="flex flex-wrap items-center gap-1.5">
               <button
                 onClick={() => handleSelectUser(DEFAULT_PROFILES[2])}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                className={`rounded-md border px-2.5 py-1 text-[11px] font-bold transition-colors ${
                   currentUser.id === 'usr-03'
-                    ? 'bg-emerald-400 text-emerald-950 shadow-xs'
-                    : 'bg-emerald-900/80 hover:bg-emerald-800 text-emerald-100'
+                    ? 'border-amber-300 bg-amber-300 text-stone-900'
+                    : 'border-stone-700 bg-stone-800 text-stone-200 hover:bg-stone-700'
                 }`}
               >
                 Pengurus (Al Qoirul)
               </button>
-
-              {/* Pengurus Kristen (Maria Jame) */}
               <button
                 onClick={() => handleSelectUser(DEFAULT_PROFILES[17])}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                className={`rounded-md border px-2.5 py-1 text-[11px] font-bold transition-colors ${
                   currentUser.id === 'usr-18'
-                    ? 'bg-teal-300 text-teal-950 shadow-xs'
-                    : 'bg-teal-900/80 hover:bg-teal-800 text-teal-100'
+                    ? 'border-amber-300 bg-amber-300 text-stone-900'
+                    : 'border-stone-700 bg-stone-800 text-stone-200 hover:bg-stone-700'
                 }`}
               >
                 Pengurus (Maria Jame)
               </button>
-
-              {/* Anggota Islam (A Isy) */}
               <button
                 onClick={() => handleSelectUser(DEFAULT_PROFILES[1])}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                className={`rounded-md border px-2.5 py-1 text-[11px] font-bold transition-colors ${
                   currentUser.id === 'usr-02'
-                    ? 'bg-blue-300 text-blue-950 shadow-xs'
-                    : 'bg-blue-900/70 hover:bg-blue-800 text-blue-100'
+                    ? 'border-amber-300 bg-amber-300 text-stone-900'
+                    : 'border-stone-700 bg-stone-800 text-stone-200 hover:bg-stone-700'
                 }`}
               >
                 Anggota (Islam)
               </button>
-
-              {/* Anggota Kristen (Bintang Very) */}
               <button
                 onClick={() => handleSelectUser(DEFAULT_PROFILES[7])}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                className={`rounded-md border px-2.5 py-1 text-[11px] font-bold transition-colors ${
                   currentUser.id === 'usr-08'
-                    ? 'bg-sky-300 text-sky-950 shadow-xs'
-                    : 'bg-sky-900/70 hover:bg-sky-800 text-sky-100'
+                    ? 'border-amber-300 bg-amber-300 text-stone-900'
+                    : 'border-stone-700 bg-stone-800 text-stone-200 hover:bg-stone-700'
                 }`}
               >
                 Anggota (Kristen)
               </button>
-
-              {/* Tombol Pembina (Nurkholis Aiman & Maria Ulfa) */}
               <button
                 onClick={() => handleSelectUser(DEFAULT_PROFILES[39])}
-                className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                className={`rounded-md border px-2 py-1 text-[11px] font-bold transition-colors ${
                   currentUser.id === DEFAULT_PROFILES[39]?.id
-                    ? 'bg-purple-300 text-purple-950 shadow-xs'
-                    : 'bg-purple-900/70 hover:bg-purple-800 text-purple-100'
+                    ? 'border-amber-300 bg-amber-300 text-stone-900'
+                    : 'border-stone-700 bg-stone-800 text-stone-200 hover:bg-stone-700'
                 }`}
               >
                 Pembina (Nurkholis)
               </button>
               <button
                 onClick={() => handleSelectUser(DEFAULT_PROFILES[40])}
-                className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                className={`rounded-md border px-2 py-1 text-[11px] font-bold transition-colors ${
                   currentUser.id === DEFAULT_PROFILES[40]?.id
-                    ? 'bg-purple-300 text-purple-950 shadow-xs'
-                    : 'bg-purple-900/70 hover:bg-purple-800 text-purple-100'
+                    ? 'border-amber-300 bg-amber-300 text-stone-900'
+                    : 'border-stone-700 bg-stone-800 text-stone-200 hover:bg-stone-700'
                 }`}
               >
                 Pembina (Maria Ulfa)
               </button>
-
-              {/* Reset data seed */}
               <button
                 onClick={handleResetData}
                 title="Reset data demo ke awal"
-                className="p-1 rounded-lg text-emerald-400 hover:text-white hover:bg-emerald-900 transition-colors ml-1"
+                aria-label="Reset data demo"
+                className="rounded-md p-1.5 text-stone-400 hover:bg-stone-800 hover:text-white"
               >
-                <RefreshCw className="w-3.5 h-3.5" />
+                <RefreshCw className="size-3.5" />
               </button>
-
-              {/* Tombol Matikan Mode Demo */}
               <button
                 onClick={() => handleToggleDemoMode(false)}
-                title="Keluar dari mode demo dan kunci ke mode login resmi"
-                className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-rose-950/80 hover:bg-rose-900 text-rose-200 border border-rose-800 transition-colors ml-1"
+                title="Keluar dari mode demo"
+                className="ml-1 rounded-md border border-red-900 bg-red-950 px-2.5 py-1 text-[11px] font-bold text-red-200 hover:bg-red-900"
               >
-                Keluar Demo
+                Keluar demo
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MAIN CONTENT AREA */}
       <main className="flex-1 pb-16">
         {currentUser.role === 'pengurus' ? (
           <PengurusView
@@ -378,23 +417,17 @@ export default function HomePage() {
         )}
       </main>
 
-      {/* FOOTER */}
-      <footer className="bg-white border-t border-slate-200 py-6 px-4 text-center text-xs text-slate-500">
-        <div className="max-w-md mx-auto space-y-3">
-          <div className="flex items-center justify-center gap-2">
-            <span className="font-semibold text-slate-700">Login sebagai: {currentUser.full_name}</span>
-            <span className="text-slate-400">•</span>
-            <button
-              onClick={handleLogout}
-              className="text-rose-600 hover:underline font-bold"
-            >
-              Keluar Akun
+      <footer className="border-t border-[#e3ddd0] bg-[#fffdf8] px-4 py-5">
+        <div className="mx-auto max-w-3xl text-center">
+          <p className="text-[13px] font-semibold text-stone-700">
+            Masuk sebagai {currentUser.full_name} ·{' '}
+            <button onClick={handleLogout} className="font-bold text-[#9f1239] underline underline-offset-2 hover:no-underline">
+              Keluar akun
             </button>
-          </div>
-
-          <div className="text-[11px] text-slate-400">
-            © 2026 Divisi 1 Keagamaan • OSIS & MPK SMKN 17 Jakarta
-          </div>
+          </p>
+          <p className="mt-1 border-t-2 border-double border-stone-300 pt-2 font-mono text-[11px] tabular-nums text-stone-400">
+            Buku Presensi A17 · Divisi 1 Keagamaan · OSIS &amp; MPK SMKN 17 Jakarta · 2026
+          </p>
         </div>
       </footer>
     </div>

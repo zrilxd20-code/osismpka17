@@ -1,11 +1,27 @@
 import type { Metadata, Viewport } from 'next';
+import { Plus_Jakarta_Sans, IBM_Plex_Mono } from 'next/font/google';
 import './globals.css';
+
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  display: 'swap',
+  variable: '--font-sans',
+});
+
+const plexMono = IBM_Plex_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  display: 'swap',
+  variable: '--font-mono',
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://osismpka17.vercel.app'),
-  title: 'Presensi Ibadah A17 - OSIS & MPK SMKN 17',
-  description: 'Sistem presensi ibadah mandiri sholat dzuhur dan pendalaman iman bagi pengurus OSIS & MPK SMKN 17 (Divisi Keagamaan A17)',
-  applicationName: 'Presensi Ibadah A17 SMKN 17',
+  title: 'Buku Presensi Ibadah A17 — OSIS & MPK SMKN 17',
+  description:
+    'Buku presensi harian Sholat Dzuhur dan Pendalaman Iman untuk pengurus OSIS & MPK SMKN 17 Jakarta, dikelola Divisi 1 Keagamaan (A17).',
+  applicationName: 'Buku Presensi A17 SMKN 17',
   icons: {
     icon: '/logo-a17.jpg',
     apple: '/logo-a17.jpg',
@@ -22,7 +38,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#059669',
+  themeColor: '#0f3d28',
 };
 
 export default function RootLayout({
@@ -31,8 +47,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="id" className="h-full">
-      <body className="min-h-full bg-slate-100 text-slate-900 flex flex-col font-sans antialiased">
+    <html lang="id" className={`h-full ${jakarta.variable} ${plexMono.variable}`}>
+      <body className="min-h-full text-stone-900 flex flex-col font-sans antialiased">
         {children}
       </body>
     </html>
