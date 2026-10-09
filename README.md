@@ -2,6 +2,12 @@
 
 Sistem presensi ibadah mandiri (sholat dzuhur & pendalaman iman) untuk pengurus OSIS & MPK SMKN 17 — Divisi Keagamaan A17.
 
+### Ketentuan Waktu Pengiriman Laporan (WIB):
+* **Dibuka**: Mulai pukul **11:30 WIB** (Sholat Dzuhur) / **11:45 WIB** (Pendalaman Iman).
+* **Batas Normal (Tepat Waktu)**: Pukul **18:00 WIB**.
+* **Masa Toleransi (Terlambat)**: Pukul **18:00 – 21:00 WIB** (Laporan tetap diterima dan otomatis dicatat terlambat).
+* **Batas Maksimal (Ditutup)**: Pukul **21:00 WIB** (Pengiriman laporan hari tersebut ditutup penuh).
+
 Stack: **Next.js 16 (App Router) + Supabase (Postgres, Auth, RLS) + Tailwind CSS 4**
 
 ## Jalankan lokal

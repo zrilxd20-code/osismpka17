@@ -73,9 +73,11 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
 
   // Settings State
   const [editDzuhurStart, setEditDzuhurStart] = useState<string>('11:30');
-  const [editDzuhurEnd, setEditDzuhurEnd] = useState<string>('14:00');
+  const [editDzuhurEnd, setEditDzuhurEnd] = useState<string>('18:00');
+  const [editDzuhurMax, setEditDzuhurMax] = useState<string>('21:00');
   const [editImanStart, setEditImanStart] = useState<string>('11:45');
-  const [editImanEnd, setEditImanEnd] = useState<string>('13:45');
+  const [editImanEnd, setEditImanEnd] = useState<string>('18:00');
+  const [editImanMax, setEditImanMax] = useState<string>('21:00');
 
   // Add Member State
   const [newNis, setNewNis] = useState<string>('');
@@ -115,12 +117,14 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
     const dz = stt.find((s) => s.ibadah === 'sholat_dzuhur');
     if (dz) {
       setEditDzuhurStart(dz.start_time.slice(0, 5));
-      setEditDzuhurEnd(dz.end_time.slice(0, 5));
+      setEditDzuhurEnd((dz.end_time || '18:00').slice(0, 5));
+      setEditDzuhurMax((dz.max_end_time || dz.jam_maksimal || '21:00').slice(0, 5));
     }
     const im = stt.find((s) => s.ibadah === 'pendalaman_iman');
     if (im) {
       setEditImanStart(im.start_time.slice(0, 5));
-      setEditImanEnd(im.end_time.slice(0, 5));
+      setEditImanEnd((im.end_time || '18:00').slice(0, 5));
+      setEditImanMax((im.max_end_time || im.jam_maksimal || '21:00').slice(0, 5));
     }
   };
 
@@ -248,12 +252,20 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
     dataService.updateSetting('sholat_dzuhur', {
       start_time: `${editDzuhurStart}:00`,
       end_time: `${editDzuhurEnd}:00`,
+      max_end_time: `${editDzuhurMax}:00`,
+      jam_mulai: `${editDzuhurStart}:00`,
+      jam_selesai: `${editDzuhurEnd}:00`,
+      jam_maksimal: `${editDzuhurMax}:00`,
     });
     dataService.updateSetting('pendalaman_iman', {
       start_time: `${editImanStart}:00`,
       end_time: `${editImanEnd}:00`,
+      max_end_time: `${editImanMax}:00`,
+      jam_mulai: `${editImanStart}:00`,
+      jam_selesai: `${editImanEnd}:00`,
+      jam_maksimal: `${editImanMax}:00`,
     });
-    showToast('Jendela waktu check-in berhasil diperbarui.');
+    showToast('Jendela waktu check-in berhasil diperbarui (Batas Normal & Batas Maksimal).');
     loadAllData();
   };
 
@@ -593,7 +605,12 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
                         </td>
 
                         <td className="py-3 px-3 font-mono text-slate-600">
-                          {formatJamWIB(item.waktu_checkin)}
+                          <div>{formatJamWIB(item.waktu_checkin)}</div>
+                          {(item.is_late || item.terlambat) && (
+                            <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                              Terlambat
+                            </span>
+                          )}
                         </td>
 
                         <td className="py-3 px-3">
@@ -1064,7 +1081,7 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
                 <div className="font-bold text-emerald-900 text-sm">
                   1. Sholat Dzuhur Berjamaah (Islam)
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-slate-600 font-semibold mb-1">Mulai Buka</label>
                     <input
@@ -1075,11 +1092,20 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-600 font-semibold mb-1">Tutup Check-In</label>
+                    <label className="block text-slate-600 font-semibold mb-1">Batas Normal (18:00)</label>
                     <input
                       type="time"
                       value={editDzuhurEnd}
                       onChange={(e) => setEditDzuhurEnd(e.target.value)}
+                      className="w-full p-2.5 rounded-xl border border-slate-300 bg-white font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">Batas Maksimal (21:00)</label>
+                    <input
+                      type="time"
+                      value={editDzuhurMax}
+                      onChange={(e) => setEditDzuhurMax(e.target.value)}
                       className="w-full p-2.5 rounded-xl border border-slate-300 bg-white font-bold"
                     />
                   </div>
@@ -1090,7 +1116,7 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
                 <div className="font-bold text-sky-900 text-sm">
                   2. Pendalaman Iman (Kristen/Katolik)
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-slate-600 font-semibold mb-1">Mulai Buka</label>
                     <input
@@ -1101,11 +1127,20 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-600 font-semibold mb-1">Tutup Check-In</label>
+                    <label className="block text-slate-600 font-semibold mb-1">Batas Normal (18:00)</label>
                     <input
                       type="time"
                       value={editImanEnd}
                       onChange={(e) => setEditImanEnd(e.target.value)}
+                      className="w-full p-2.5 rounded-xl border border-slate-300 bg-white font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">Batas Maksimal (21:00)</label>
+                    <input
+                      type="time"
+                      value={editImanMax}
+                      onChange={(e) => setEditImanMax(e.target.value)}
                       className="w-full p-2.5 rounded-xl border border-slate-300 bg-white font-bold"
                     />
                   </div>
@@ -1116,7 +1151,7 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
                 type="submit"
                 className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-xs transition-colors"
               >
-                Simpan Jadwal Waktu WIB
+                Simpan Jadwal Waktu WIB (Normal 18:00 & Maksimal 21:00)
               </button>
             </form>
           </div>

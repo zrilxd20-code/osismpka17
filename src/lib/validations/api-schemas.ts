@@ -83,7 +83,8 @@ export const PelanggaranSchema = z.object({
 
 export const JenisIbadahPatchSchema = z.object({
   jam_mulai: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/, 'Format jam mulai harus HH:mm atau HH:mm:ss.'),
-  jam_selesai: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/, 'Format jam selesai harus HH:mm atau HH:mm:ss.'),
+  jam_selesai: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/, 'Format jam selesai (batas normal) harus HH:mm atau HH:mm:ss.'),
+  jam_maksimal: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/, 'Format jam maksimal (batas toleransi) harus HH:mm atau HH:mm:ss.').optional(),
   hari_aktif: z.array(z.number().int().min(1).max(7), { message: 'Hari aktif harus berupa array angka 1 (Senin) hingga 7 (Minggu).' }).min(1, 'Paling sedikit pilih 1 hari aktif.'),
 });
 

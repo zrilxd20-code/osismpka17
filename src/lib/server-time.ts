@@ -64,19 +64,35 @@ export function getServerDayOfWeekWIB(): number {
 }
 
 /**
- * Validasi apakah jam server berada di dalam jendela waktu ibadah
+ * Validasi apakah jam server berada di dalam jendela waktu ibadah.
+ * Aturan:
+ * - Batas waktu normal: 18:00:00 WIB (Tepat waktu)
+ * - Toleransi maksimal ditunggu: 21:00:00 WIB (Terlambat)
+ * - Lewat 21:00:00 WIB: Ditutup penuh
  */
 export function isServerWithinTimeWindow(
-  startTime: string, // "11:30:00" atau "11:30"
-  endTime: string,   // "14:00:00" atau "14:00"
-  daysActive: number[] = [1, 2, 3, 4, 5]
-): { isOpen: boolean; reason?: string; currentTimeWIB: string } {
+  startTime: string,                    // Misal "11:30:00" atau "11:30"
+  endTime: string = '18:00:00',          // Batas normal: "18:00:00"
+  maxEndTimeOrDays: string | number[] = '21:00:00', // Batas toleransi maksimal: "21:00:00" (atau daysActive jika legacy)
+  daysActiveArg: number[] = [1, 2, 3, 4, 5]
+): {
+  isOpen: boolean;
+  isLate: boolean;
+  status: 'open' | 'late' | 'closed';
+  reason?: string;
+  currentTimeWIB: string;
+} {
   const currentDay = getServerDayOfWeekWIB();
   const currentTimeStr = getServerTimeWIB();
+
+  const maxEndTime = typeof maxEndTimeOrDays === 'string' ? maxEndTimeOrDays : '21:00:00';
+  const daysActive = Array.isArray(maxEndTimeOrDays) ? maxEndTimeOrDays : daysActiveArg;
 
   if (!daysActive.includes(currentDay)) {
     return {
       isOpen: false,
+      isLate: false,
+      status: 'closed',
       reason: 'Hari ini tidak dijadwalkan untuk check-in ibadah (hanya hari sekolah aktif).',
       currentTimeWIB: currentTimeStr,
     };
@@ -90,26 +106,47 @@ export function isServerWithinTimeWindow(
   const curSec = toSeconds(currentTimeStr);
   const startSec = toSeconds(startTime);
   const endSec = toSeconds(endTime);
+  const maxSec = toSeconds(maxEndTime);
 
+  // Belum mulai (misal sebelum 11:30)
   if (curSec < startSec) {
     const diffMin = Math.ceil((startSec - curSec) / 60);
     return {
       isOpen: false,
+      isLate: false,
+      status: 'closed',
       reason: `Jendela check-in belum dibuka. Jam server saat ini: ${currentTimeStr} WIB. Dimulai pukul ${startTime.slice(0, 5)} WIB (${diffMin} menit lagi).`,
       currentTimeWIB: currentTimeStr,
     };
   }
 
-  if (curSec > endSec) {
+  // Melewati batas maksimal (misal lewat 21:00)
+  if (curSec > maxSec) {
     return {
       isOpen: false,
-      reason: `Jendela check-in telah ditutup pada pukul ${endTime.slice(0, 5)} WIB. Jam server saat ini: ${currentTimeStr} WIB.`,
+      isLate: true,
+      status: 'closed',
+      reason: `Batas maksimal pengiriman laporan ibadah telah ditutup pada pukul ${maxEndTime.slice(0, 5)} WIB. Jam server saat ini: ${currentTimeStr} WIB.`,
       currentTimeWIB: currentTimeStr,
     };
   }
 
+  // Antara batas normal (18:00) dan batas maksimal (21:00) => TERLAMBAT tapi masih DITUNGGU
+  if (curSec > endSec) {
+    return {
+      isOpen: true,
+      isLate: true,
+      status: 'late',
+      reason: `Batas normal (${endTime.slice(0, 5)} WIB) telah lewat. Laporan diterima dalam masa toleransi (paling lambat ${maxEndTime.slice(0, 5)} WIB) dan dicatat terlambat.`,
+      currentTimeWIB: currentTimeStr,
+    };
+  }
+
+  // Tepat waktu (antara jam mulai dan jam batas normal 18:00)
   return {
     isOpen: true,
+    isLate: false,
+    status: 'open',
     currentTimeWIB: currentTimeStr,
   };
 }

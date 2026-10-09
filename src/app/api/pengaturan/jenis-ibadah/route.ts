@@ -69,17 +69,22 @@ export async function PATCH(req: NextRequest) {
     if (!parseResult.success) {
       return NextResponse.json({ ok: false, error: formatZodError(parseResult.error) }, { status: 400 });
     }
-    const { jam_mulai, jam_selesai, hari_aktif } = parseResult.data;
+    const { jam_mulai, jam_selesai, jam_maksimal, hari_aktif } = parseResult.data;
 
     const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
     if (!isDemo) {
       const supabase = await createClient();
-      let query = supabase.from('jenis_ibadah').update({
+      const updatePayload: Record<string, unknown> = {
         jam_mulai,
         jam_selesai,
         hari_aktif,
-      });
+      };
+      if (jam_maksimal) {
+        updatePayload.jam_maksimal = jam_maksimal;
+      }
+
+      let query = supabase.from('jenis_ibadah').update(updatePayload);
 
       if (id) {
         query = query.eq('id', id);
@@ -100,12 +105,17 @@ export async function PATCH(req: NextRequest) {
       dataService.updateSetting(targetIbadah, {
         start_time: jam_mulai,
         end_time: jam_selesai,
+        jam_mulai,
+        jam_selesai,
+        max_end_time: jam_maksimal || '21:00:00',
+        jam_maksimal: jam_maksimal || '21:00:00',
         days_active: hari_aktif,
+        hari_aktif,
       });
 
       return NextResponse.json({
         ok: true,
-        data: { jam_mulai, jam_selesai, hari_aktif },
+        data: { jam_mulai, jam_selesai, jam_maksimal: jam_maksimal || '21:00:00', hari_aktif },
         message: 'Pengaturan jendela waktu check-in berhasil diperbarui.',
       });
     }

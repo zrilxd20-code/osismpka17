@@ -74,13 +74,15 @@ export const DEFAULT_SETTINGS: SettingsTimeWindow[] = [
     label: 'Sholat Dzuhur Berjamaah',
     agama_wajib: ['islam'],
     jam_mulai: '11:30:00',
-    jam_selesai: '14:00:00',
+    jam_selesai: '18:00:00',
+    jam_maksimal: '21:00:00',
     start_time: '11:30:00',
-    end_time: '14:00:00',
+    end_time: '18:00:00',
+    max_end_time: '21:00:00',
     is_active: true,
     hari_aktif: [1, 2, 3, 4, 5],
     days_active: [1, 2, 3, 4, 5],
-    keterangan: 'Musholla Utama SMA (WIB)',
+    keterangan: 'Batas normal kirim laporan 18:00 WIB, maksimal ditunggu 21:00 WIB',
   },
   {
     id: 'setting-iman-2',
@@ -89,13 +91,15 @@ export const DEFAULT_SETTINGS: SettingsTimeWindow[] = [
     label: 'Pendalaman Iman Kristen/Katolik',
     agama_wajib: ['kristen', 'katolik'],
     jam_mulai: '11:45:00',
-    jam_selesai: '13:45:00',
+    jam_selesai: '18:00:00',
+    jam_maksimal: '21:00:00',
     start_time: '11:45:00',
-    end_time: '13:45:00',
+    end_time: '18:00:00',
+    max_end_time: '21:00:00',
     is_active: true,
     hari_aktif: [1, 2, 3, 4, 5],
     days_active: [1, 2, 3, 4, 5],
-    keterangan: 'Ruang Agama Kristen & Katolik (WIB)',
+    keterangan: 'Batas normal kirim laporan 18:00 WIB, maksimal ditunggu 21:00 WIB',
   },
 ];
 
@@ -346,7 +350,34 @@ class DataService {
 
   // --- SETTINGS JENDELA WAKTU ---
   public getSettings(): SettingsTimeWindow[] {
-    return this.getItem<SettingsTimeWindow[]>(STORAGE_KEY_SETTINGS, DEFAULT_SETTINGS);
+    const raw = this.getItem<SettingsTimeWindow[]>(STORAGE_KEY_SETTINGS, DEFAULT_SETTINGS);
+    // Migrasi otomatis jika data di browser masih menyimpan jam lama (14:00/13:45)
+    let needsSave = false;
+    const migrated = raw.map((s) => {
+      const copy = { ...s };
+      if (!copy.max_end_time || !copy.jam_maksimal) {
+        copy.jam_maksimal = '21:00:00';
+        copy.max_end_time = '21:00:00';
+        needsSave = true;
+      }
+      if (
+        copy.end_time === '14:00:00' ||
+        copy.end_time === '13:45:00' ||
+        copy.jam_selesai === '14:00:00' ||
+        copy.jam_selesai === '13:45:00'
+      ) {
+        copy.end_time = '18:00:00';
+        copy.jam_selesai = '18:00:00';
+        copy.keterangan = 'Batas normal kirim laporan 18:00 WIB, maksimal ditunggu 21:00 WIB';
+        needsSave = true;
+      }
+      return copy;
+    });
+
+    if (needsSave && this.isBrowser) {
+      this.setItem(STORAGE_KEY_SETTINGS, migrated);
+    }
+    return migrated;
   }
 
   public updateSetting(ibadah: IbadahType, updates: Partial<SettingsTimeWindow>): void {
@@ -402,19 +433,22 @@ class DataService {
     const today = getTodayWIB();
     const settings = this.getSettings().find((s) => (s.nama === params.ibadah || s.ibadah === params.ibadah));
 
+    let isLateSubmission = false;
     if (settings && settings.is_active) {
       const windowCheck = isWithinTimeWindow(
         settings.start_time || settings.jam_mulai,
-        settings.end_time || settings.jam_selesai,
+        settings.end_time || settings.jam_selesai || '18:00:00',
+        settings.max_end_time || settings.jam_maksimal || '21:00:00',
         settings.days_active || settings.hari_aktif,
         params.bypassTimeCheck
       );
       if (!windowCheck.isOpen) {
         return {
           success: false,
-          message: windowCheck.reason || 'Jendela waktu check-in belum dibuka atau sudah lewat.',
+          message: windowCheck.reason || 'Batas maksimal pengiriman laporan ibadah telah ditutup pada pukul 21:00 WIB.',
         };
       }
+      isLateSubmission = windowCheck.isLate;
     }
 
     const existing = this.getPresensiList().find(
@@ -432,6 +466,10 @@ class DataService {
     const profile = this.getProfileById(params.userId);
 
     const now = new Date().toISOString();
+    const catatanOtomatis = isLateSubmission
+      ? 'Tercatat terlambat (dikirim setelah pukul 18:00 WIB, dalam toleransi s.d. 21:00 WIB)'
+      : null;
+
     const newRecord: PresensiIbadah = {
       id: 'pre-' + Math.random().toString(36).substring(2, 9),
       profile_id: params.userId,
@@ -439,9 +477,13 @@ class DataService {
       tanggal: today,
       ibadah: params.ibadah,
       status: params.status,
+      is_late: isLateSubmission,
+      terlambat: isLateSubmission,
       keterangan: params.keteranganHalangan || null,
       keterangan_halangan: params.keteranganHalangan || null,
       saksi: params.saksi?.trim() || null,
+      catatan_pengurus: catatanOtomatis,
+      catatan_verifikasi: catatanOtomatis,
       waktu_checkin: now,
       dibuat_pada: now,
       input_mode: 'mandiri',
@@ -459,12 +501,21 @@ class DataService {
       action: 'CHECKIN',
       table_name: 'presensi_ibadah',
       record_id: newRecord.id,
-      details: { ibadah: params.ibadah, status: params.status, saksi: params.saksi },
+      details: {
+        ibadah: params.ibadah,
+        status: params.status,
+        saksi: params.saksi,
+        is_late: isLateSubmission,
+      },
     });
+
+    const successMsg = isLateSubmission
+      ? 'Laporan berhasil dikirim dalam masa toleransi (tercatat terlambat setelah jam 18:00 WIB). Menunggu verifikasi pengurus.'
+      : 'Check-in berhasil dikirim. Menunggu verifikasi pengurus.';
 
     return {
       success: true,
-      message: 'Check-in berhasil dikirim. Menunggu verifikasi pengurus.',
+      message: successMsg,
       data: newRecord,
     };
   }

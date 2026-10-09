@@ -50,13 +50,14 @@ export default function AnggotaView({ currentUser, onRefreshData }: AnggotaViewP
     return settings.find((s) => s.ibadah === ibadahType);
   }, [settings, ibadahType]);
 
-  // Cek apakah jendela waktu sedang buka
+  // Cek apakah jendela waktu sedang buka (Normal: 18:00 WIB, Maksimal: 21:00 WIB)
   const windowStatus = useMemo(() => {
-    if (!currentSetting) return { isOpen: true };
+    if (!currentSetting) return { isOpen: true, isLate: false, status: 'open' as const };
     return isWithinTimeWindow(
-      currentSetting.start_time,
-      currentSetting.end_time,
-      currentSetting.days_active,
+      currentSetting.start_time || currentSetting.jam_mulai,
+      currentSetting.end_time || currentSetting.jam_selesai || '18:00:00',
+      currentSetting.max_end_time || currentSetting.jam_maksimal || '21:00:00',
+      currentSetting.days_active || currentSetting.hari_aktif,
       bypassTime
     );
   }, [currentSetting, bypassTime]);
@@ -305,31 +306,51 @@ export default function AnggotaView({ currentUser, onRefreshData }: AnggotaViewP
             {/* Live Status Jendela Waktu */}
             <div className="text-right">
               {windowStatus.isOpen ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500 text-white shadow-xs">
-                  <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-                  Jendela Dibuka
-                </span>
+                windowStatus.isLate ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500 text-white shadow-xs">
+                    <Clock className="w-3.5 h-3.5" />
+                    Toleransi (Terlambat)
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white shadow-xs">
+                    <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                    Tepat Waktu
+                  </span>
+                )
               ) : (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 border border-rose-200">
                   <Clock className="w-3.5 h-3.5" />
-                  Ditutup
+                  Ditutup (Lewat 21:00)
                 </span>
               )}
               {currentSetting && (
-                <div className="text-[11px] text-slate-400 font-mono mt-1">
-                  {currentSetting.start_time.slice(0, 5)} - {currentSetting.end_time.slice(0, 5)} WIB
+                <div className="text-[11px] text-slate-500 font-mono mt-1">
+                  Batas 18:00 · Maks 21:00 WIB
                 </div>
               )}
             </div>
           </div>
 
-          {/* Banner jika jendela ditutup */}
-          {!windowStatus.isOpen && (
-            <div className="mt-4 p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start gap-2.5">
-              <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          {/* Banner toleransi keterlambatan jika dibuka setelah 18:00 WIB */}
+          {windowStatus.isOpen && windowStatus.isLate && (
+            <div className="mt-4 p-3.5 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
               <div>
-                <div className="font-bold">Check-in sedang nonaktif</div>
-                <div>{windowStatus.reason}</div>
+                <div className="font-bold">Masa Toleransi Keterlambatan</div>
+                <div className="mt-0.5">
+                  Batas waktu normal (18:00 WIB) telah lewat. Laporan ibadah masih diterima paling lambat hingga pukul 21:00 WIB dan akan otomatis dicatat terlambat.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Banner jika jendela ditutup (lewat 21:00 WIB atau hari libur) */}
+          {!windowStatus.isOpen && (
+            <div className="mt-4 p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-start gap-2.5">
+              <Info className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <div>
+                <div className="font-bold">Check-in sedang ditutup</div>
+                <div className="mt-0.5">{windowStatus.reason || 'Batas maksimal pengiriman laporan ibadah hari ini adalah pukul 21:00 WIB.'}</div>
               </div>
             </div>
           )}
@@ -472,6 +493,11 @@ export default function AnggotaView({ currentUser, onRefreshData }: AnggotaViewP
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     <span>Menyimpan Presensi...</span>
                   </>
+                ) : windowStatus.isLate ? (
+                  <>
+                    <Send className="w-5 h-5" />
+                    <span>KIRIM LAPORAN (TOLERANSI TERLAMBAT)</span>
+                  </>
                 ) : (
                   <>
                     <Send className="w-5 h-5" />
@@ -509,7 +535,7 @@ export default function AnggotaView({ currentUser, onRefreshData }: AnggotaViewP
                 className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/60 hover:bg-slate-50 transition-colors flex items-center justify-between"
               >
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-bold text-slate-800">
                       {formatTanggalIndonesia(item.tanggal)}
                     </span>
@@ -524,6 +550,11 @@ export default function AnggotaView({ currentUser, onRefreshData }: AnggotaViewP
                     >
                       {item.status === 'izin_halangan' ? 'Izin' : item.status}
                     </span>
+                    {(item.is_late || item.terlambat) && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                        Terlambat
+                      </span>
+                    )}
                   </div>
 
                   <div className="text-[11px] text-slate-500 mt-1 flex items-center gap-2 flex-wrap">

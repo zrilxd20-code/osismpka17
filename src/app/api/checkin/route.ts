@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
       agama_wajib: string[];
       jam_mulai: string;
       jam_selesai: string;
+      jam_maksimal?: string;
       hari_aktif: number[];
     } | null = null;
 
@@ -63,7 +64,11 @@ export async function POST(req: NextRequest) {
           { status: 404 }
         );
       }
-      jenisIbadah = data;
+      jenisIbadah = {
+        ...data,
+        jam_selesai: data.jam_selesai || '18:00:00',
+        jam_maksimal: data.jam_maksimal || '21:00:00',
+      };
     } else {
       // Mock lookup
       const stts = dataService.getSettings();
@@ -75,7 +80,8 @@ export async function POST(req: NextRequest) {
           label: matched.label,
           agama_wajib: matched.agama_wajib || (matched.ibadah === 'sholat_dzuhur' ? ['islam'] : ['kristen', 'katolik']),
           jam_mulai: matched.jam_mulai || matched.start_time,
-          jam_selesai: matched.jam_selesai || matched.end_time,
+          jam_selesai: matched.jam_selesai || matched.end_time || '18:00:00',
+          jam_maksimal: matched.jam_maksimal || matched.max_end_time || '21:00:00',
           hari_aktif: matched.hari_aktif || matched.days_active,
         };
       } else {
@@ -85,7 +91,8 @@ export async function POST(req: NextRequest) {
           label: currentUser.agama === 'islam' ? 'Sholat Dzuhur' : 'Pendalaman Iman',
           agama_wajib: currentUser.agama === 'islam' ? ['islam'] : ['kristen', 'katolik'],
           jam_mulai: '11:30:00',
-          jam_selesai: '14:00:00',
+          jam_selesai: '18:00:00',
+          jam_maksimal: '21:00:00',
           hari_aktif: [1, 2, 3, 4, 5],
         };
       }
@@ -109,22 +116,26 @@ export async function POST(req: NextRequest) {
     }
 
     // 6. Cek Jendela Waktu Server (Asia/Jakarta, Bukan Jam Perangkat)
+    // Batas normal: 18:00 WIB, Maksimal ditunggu: 21:00 WIB
     const bypassHeader = req.headers.get('x-bypass-time-window') === 'true';
+    let isLateSubmission = false;
     if (!bypassHeader) {
       const windowCheck = isServerWithinTimeWindow(
         jenisIbadah.jam_mulai,
-        jenisIbadah.jam_selesai,
+        jenisIbadah.jam_selesai || '18:00:00',
+        jenisIbadah.jam_maksimal || '21:00:00',
         jenisIbadah.hari_aktif
       );
       if (!windowCheck.isOpen) {
         return NextResponse.json(
           {
             ok: false,
-            error: windowCheck.reason || 'Jendela check-in sedang ditutup.',
+            error: windowCheck.reason || 'Batas maksimal pengiriman laporan ibadah telah ditutup pada pukul 21:00 WIB.',
           },
           { status: 400 }
         );
       }
+      isLateSubmission = windowCheck.isLate;
     }
 
     // 7. Cek Duplikasi Check-In Hari Ini di Server
@@ -159,6 +170,9 @@ export async function POST(req: NextRequest) {
         keterangan: status === 'izin' ? keterangan : null,
         saksi: saksi?.trim() || null,
         status_verifikasi: 'menunggu',
+        catatan_verifikasi: isLateSubmission
+          ? 'Tercatat terlambat (dikirim setelah pukul 18:00 WIB, dalam toleransi s.d. 21:00 WIB)'
+          : null,
         dibuat_pada: getServerTimestampWIB(),
       };
 
@@ -179,7 +193,9 @@ export async function POST(req: NextRequest) {
         {
           ok: true,
           data: inserted,
-          message: 'Check-in mandiri berhasil dikirim. Menunggu verifikasi pengurus.',
+          message: isLateSubmission
+            ? 'Check-in mandiri berhasil (tercatat terlambat setelah jam 18:00 WIB). Menunggu verifikasi pengurus.'
+            : 'Check-in mandiri berhasil dikirim. Menunggu verifikasi pengurus.',
         },
         { status: 201 }
       );

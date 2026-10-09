@@ -37,9 +37,11 @@ export interface JenisIbadah {
   label: string;
   agama_wajib: string[];
   jam_mulai: string; // "11:30:00"
-  jam_selesai: string; // "14:00:00"
+  jam_selesai: string; // "18:00:00" (Batas waktu normal)
+  jam_maksimal?: string; // "21:00:00" (Batas toleransi maksimal)
   start_time: string; // Kompatibilitas frontend
-  end_time: string;   // Kompatibilitas frontend
+  end_time: string;   // Kompatibilitas frontend (Batas normal)
+  max_end_time?: string; // Kompatibilitas frontend (Batas maksimal)
   hari_aktif: number[]; // [1, 2, 3, 4, 5]
   days_active: number[]; // Kompatibilitas frontend
   is_active: boolean;
@@ -58,6 +60,8 @@ export interface Checkin {
   ibadah?: IbadahType; // Kompatibilitas frontend
   tanggal: string; // "YYYY-MM-DD"
   status: CheckinStatus;
+  is_late?: boolean; // Dikirim setelah 18:00 dalam batas toleransi 21:00
+  terlambat?: boolean; // Alias is_late
   keterangan?: string | null;
   keterangan_halangan?: string | null; // Kompatibilitas frontend
   saksi?: string | null;

@@ -72,17 +72,37 @@ export function formatJamWIB(isoOrTimeStr?: string | null): string {
 /**
  * Cek apakah waktu sekarang berada dalam jendela waktu ibadah
  * @param startTime format "HH:mm:ss" atau "HH:mm"
- * @param endTime format "HH:mm:ss" atau "HH:mm"
- * @param daysActive array hari [1,2,3,4,5] (1=Senin, 7=Minggu)
+ * @param startTime format "HH:mm:ss" atau "HH:mm"
+ * @param endTime format "HH:mm:ss" atau "HH:mm" (Batas normal, default 18:00:00)
+ * @param maxEndTimeOrDays format "HH:mm:ss" batas toleransi maksimal (default 21:00:00) atau array hari jika legacy
+ * @param daysActiveOrBypass array hari [1,2,3,4,5] atau boolean bypass jika legacy
+ * @param bypassForTesting boolean untuk bypass jendela waktu
  */
 export function isWithinTimeWindow(
   startTime: string,
-  endTime: string,
-  daysActive: number[] = [1, 2, 3, 4, 5],
+  endTime: string = '18:00:00',
+  maxEndTimeOrDays: string | number[] = '21:00:00',
+  daysActiveOrBypass?: number[] | boolean,
   bypassForTesting: boolean = false
-): { isOpen: boolean; reason?: string; minutesLeft?: number } {
-  if (bypassForTesting) {
-    return { isOpen: true };
+): {
+  isOpen: boolean;
+  isLate: boolean;
+  status: 'open' | 'late' | 'closed';
+  reason?: string;
+  minutesLeft?: number;
+  currentTimeWIB?: string;
+} {
+  const isLegacy = Array.isArray(maxEndTimeOrDays);
+  const maxEndTime = isLegacy ? '21:00:00' : (typeof maxEndTimeOrDays === 'string' ? maxEndTimeOrDays : '21:00:00');
+  const daysActive = isLegacy
+    ? maxEndTimeOrDays
+    : (Array.isArray(daysActiveOrBypass) ? daysActiveOrBypass : [1, 2, 3, 4, 5]);
+  const bypass = isLegacy
+    ? (typeof daysActiveOrBypass === 'boolean' ? daysActiveOrBypass : false)
+    : bypassForTesting;
+
+  if (bypass) {
+    return { isOpen: true, isLate: false, status: 'open' };
   }
 
   const now = new Date();
@@ -107,6 +127,8 @@ export function isWithinTimeWindow(
   if (!daysActive.includes(currentDay)) {
     return {
       isOpen: false,
+      isLate: false,
+      status: 'closed',
       reason: 'Hari ini tidak dijadwalkan untuk check-in ibadah (hanya hari sekolah aktif).',
     };
   }
@@ -129,25 +151,51 @@ export function isWithinTimeWindow(
   const currentSec = toSeconds(currentTimeStr);
   const startSec = toSeconds(startTime);
   const endSec = toSeconds(endTime);
+  const maxSec = toSeconds(maxEndTime);
 
+  // Belum buka
   if (currentSec < startSec) {
     const diffMin = Math.ceil((startSec - currentSec) / 60);
     return {
       isOpen: false,
+      isLate: false,
+      status: 'closed',
       reason: `Jendela belum dibuka. Dimulai pukul ${startTime.slice(0, 5)} WIB (${diffMin} menit lagi).`,
+      currentTimeWIB: currentTimeStr,
     };
   }
 
-  if (currentSec > endSec) {
+  // Melewati batas maksimal 21:00 WIB
+  if (currentSec > maxSec) {
     return {
       isOpen: false,
-      reason: `Jendela check-in telah ditutup pada pukul ${endTime.slice(0, 5)} WIB.`,
+      isLate: true,
+      status: 'closed',
+      reason: `Batas maksimal pengiriman laporan ibadah telah ditutup pada pukul ${maxEndTime.slice(0, 5)} WIB.`,
+      currentTimeWIB: currentTimeStr,
     };
   }
 
+  // Antara 18:00 dan 21:00 => Toleransi keterlambatan
+  if (currentSec > endSec) {
+    const minutesLeft = Math.floor((maxSec - currentSec) / 60);
+    return {
+      isOpen: true,
+      isLate: true,
+      status: 'late',
+      minutesLeft,
+      reason: `Batas normal (${endTime.slice(0, 5)} WIB) telah lewat. Diterima dalam toleransi s.d. ${maxEndTime.slice(0, 5)} WIB (sisa ${minutesLeft} menit).`,
+      currentTimeWIB: currentTimeStr,
+    };
+  }
+
+  // Tepat waktu (sebelum 18:00)
   const minutesLeft = Math.floor((endSec - currentSec) / 60);
   return {
     isOpen: true,
+    isLate: false,
+    status: 'open',
     minutesLeft,
+    currentTimeWIB: currentTimeStr,
   };
 }

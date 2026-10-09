@@ -271,7 +271,8 @@ async function runTests() {
       },
       body: JSON.stringify({
         jam_mulai: '11:30:00',
-        jam_selesai: '14:00:00',
+        jam_selesai: '18:00:00',
+        jam_maksimal: '21:00:00',
         hari_aktif: [1, 2, 3, 4, 5],
       }),
     });

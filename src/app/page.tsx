@@ -148,7 +148,7 @@ export default function HomePage() {
               </h1>
               <p className="mt-2 text-sm leading-relaxed text-white/75">
                 Catat kehadiran Sholat Dzuhur dan Pendalaman Iman tiap hari.
-                Dicatat mandiri, diverifikasi pengurus.
+                Batas kirim normal pukul 18.00 WIB, paling maksimal ditunggu hingga pukul 21.00 WIB.
               </p>
             </div>
 
@@ -158,14 +158,18 @@ export default function HomePage() {
                   <Clock3 className="size-4 text-[#d9c9a3]" />
                   Sholat Dzuhur
                 </dt>
-                <dd className="font-mono text-xs tabular-nums text-white/85">11.30–14.00 WIB</dd>
+                <dd className="font-mono text-xs tabular-nums text-white/85 text-right">
+                  11.30–18.00 <span className="text-[11px] text-[#f6ecd8]">(Maks 21.00 WIB)</span>
+                </dd>
               </div>
               <div className="flex items-center justify-between gap-3 px-4 py-3">
                 <dt className="flex items-center gap-2 font-semibold">
                   <BookOpenCheck className="size-4 text-[#d9c9a3]" />
                   Pendalaman Iman
                 </dt>
-                <dd className="font-mono text-xs tabular-nums text-white/85">11.45–13.45 WIB</dd>
+                <dd className="font-mono text-xs tabular-nums text-white/85 text-right">
+                  11.45–18.00 <span className="text-[11px] text-[#f6ecd8]">(Maks 21.00 WIB)</span>
+                </dd>
               </div>
               <div className="flex items-center justify-between gap-3 px-4 py-3">
                 <dt className="flex items-center gap-2 font-semibold">
