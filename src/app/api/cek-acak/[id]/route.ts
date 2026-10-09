@@ -45,7 +45,7 @@ export async function PATCH(
           catatan: catatan || null,
         })
         .eq('id', id)
-        .select('*, checkin:checkin(*, profile:profiles(*))')
+        .select('*, checkin:checkin(*, profile:profiles!checkin_profile_id_fkey(*))')
         .single();
 
       if (error) {

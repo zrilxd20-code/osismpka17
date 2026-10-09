@@ -30,6 +30,8 @@ import {
   Check,
   X,
   Sparkles,
+  RefreshCw,
+  Database,
 } from 'lucide-react';
 
 interface PengurusViewProps {
@@ -91,6 +93,9 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
   // Alert Banner
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  const [isCloudSyncing, setIsCloudSyncing] = useState<boolean>(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string>('');
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
@@ -128,8 +133,58 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
     }
   };
 
+  const triggerCloudSync = async (silent = false) => {
+    if (!silent) setIsCloudSyncing(true);
+    try {
+      const res = await dataService.syncFromCloud();
+      setLastSyncTime(
+        new Date().toLocaleTimeString('id-ID', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        })
+      );
+      loadAllData();
+      if (!silent) {
+        showToast(
+          res.success
+            ? `Berhasil disinkronkan (${res.count} presensi live di cloud).`
+            : 'Sinkronisasi cloud selesai.'
+        );
+      }
+    } catch (e) {
+      console.warn('Sync failed:', e);
+      if (!silent) showToast('Kendala jaringan saat sinkronisasi cloud.');
+    } finally {
+      if (!silent) setIsCloudSyncing(false);
+    }
+  };
+
   useEffect(() => {
     loadAllData();
+    triggerCloudSync(true);
+
+    // Langganan update jika background sync selesai
+    const unsubscribe = dataService.subscribeSync(() => {
+      loadAllData();
+      setLastSyncTime(
+        new Date().toLocaleTimeString('id-ID', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        })
+      );
+    });
+
+    // Polling background setiap 10 detik agar checkin dari smartphone anggota langsung muncul
+    const interval = setInterval(() => {
+      dataService.syncFromCloud();
+    }, 10000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
   }, []);
 
   // Filtered members list
@@ -303,6 +358,41 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
           <span>{toastMessage}</span>
         </div>
       )}
+
+      {/* CLOUD DATABASE LIVE STATUS BAR */}
+      <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-950 text-white rounded-2xl p-3.5 sm:p-4 border border-emerald-800/40 shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="relative flex items-center justify-center w-8 h-8 rounded-xl bg-emerald-900/60 border border-emerald-500/30 shrink-0">
+            <span className="absolute w-2 h-2 rounded-full bg-emerald-400 animate-ping opacity-75" />
+            <span className="relative w-2 h-2 rounded-full bg-emerald-400" />
+          </div>
+          <div>
+            <div className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+              <span>Database Cloud Live Terhubung</span>
+              <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-emerald-500/30">
+                Supabase Live
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-300 mt-0.5">
+              Input check-in dari HP anggota langsung masuk secara realtime ke dashboard pengurus.
+              {lastSyncTime && (
+                <span className="ml-1 text-emerald-300 font-medium">
+                  • Terakhir sinkron: {lastSyncTime} WIB
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => triggerCloudSync(false)}
+          disabled={isCloudSyncing}
+          className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-semibold shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${isCloudSyncing ? 'animate-spin' : ''}`} />
+          <span>{isCloudSyncing ? 'Menyinkronkan...' : 'Sinkronkan Sekarang'}</span>
+        </button>
+      </div>
 
       {/* METRIC CARDS HEADER */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">

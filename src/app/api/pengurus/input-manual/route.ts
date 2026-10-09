@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
       const { data: saved, error } = await supabase
         .from('checkin')
         .upsert(record, { onConflict: 'profile_id,jenis_ibadah_id,tanggal' })
-        .select('*, profile:profiles(*)')
+        .select('*, profile:profiles!checkin_profile_id_fkey(*)')
         .single();
 
       if (error) {

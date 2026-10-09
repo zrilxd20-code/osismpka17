@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
       const { data: inserted, error: insertErr } = await supabase
         .from('cek_acak')
         .insert(recordsToInsert)
-        .select('*, checkin:checkin(*, profile:profiles(*))');
+        .select('*, checkin:checkin(*, profile:profiles!checkin_profile_id_fkey(*))');
 
       if (insertErr) {
         return NextResponse.json({ ok: false, error: insertErr.message }, { status: 500 });

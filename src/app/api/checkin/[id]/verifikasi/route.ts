@@ -46,7 +46,7 @@ export async function PATCH(
           diverifikasi_oleh: currentUser.id,
         })
         .eq('id', id)
-        .select('*, profile:profiles(*)')
+        .select('*, profile:profiles!checkin_profile_id_fkey(*)')
         .single();
 
       if (error) {

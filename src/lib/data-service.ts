@@ -12,6 +12,20 @@ import {
   VerifikasiStatus,
 } from '@/types/database';
 import { getTodayWIB, isWithinTimeWindow } from './time-utils';
+import { createClient as createSupabaseClient, SupabaseClient } from '@supabase/supabase-js';
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://walilvzlcomrhbeyfbfy.supabase.co';
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhbGlsdnpsY29tcmhiZXlmYmZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzMzA5MDYsImV4cCI6MjEwNjkwNjkwNn0.PLobmYVn3tdU1_kQdnyHX9zrzUmybHL0xYvbA33EeIg';
+
+const IBADAH_UUID_MAP: Record<string, string> = {
+  sholat_dzuhur: '0728ae44-4ba3-458f-8427-462d24bc8724',
+  pendalaman_iman: '0aca35e3-d047-482e-864e-7e60aadfd2d7',
+};
+
+const UUID_TO_IBADAH_MAP: Record<string, IbadahType> = {
+  '0728ae44-4ba3-458f-8427-462d24bc8724': 'sholat_dzuhur',
+  '0aca35e3-d047-482e-864e-7e60aadfd2d7': 'pendalaman_iman',
+};
 
 const STORAGE_KEY_PROFILES = 'osis_mpk_ibadah_profiles_v3';
 const STORAGE_KEY_PRESENSI = 'osis_mpk_ibadah_presensi_v3';
@@ -182,6 +196,307 @@ function getInitialPresensi(): PresensiIbadah[] {
 
 class DataService {
   private isBrowser = typeof window !== 'undefined';
+  private supabase: SupabaseClient | null = null;
+  private isSyncing = false;
+  private cloudProfilesCache: { id: string; nis: string }[] | null = null;
+  private syncListeners: (() => void)[] = [];
+
+  constructor() {
+    try {
+      this.supabase = createSupabaseClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: { persistSession: false },
+      });
+    } catch (e) {
+      console.warn('Gagal inisialisasi Supabase client:', e);
+    }
+  }
+
+  /**
+   * Subscribe ke event sinkronisasi cloud agar UI komponen otomatis update
+   */
+  public subscribeSync(callback: () => void): () => void {
+    this.syncListeners.push(callback);
+    return () => {
+      this.syncListeners = this.syncListeners.filter((cb) => cb !== callback);
+    };
+  }
+
+  private notifySyncListeners(): void {
+    for (const cb of this.syncListeners) {
+      try {
+        cb();
+      } catch (e) {
+        console.warn('Sync listener error:', e);
+      }
+    }
+  }
+
+  /**
+   * Sinkronisasi data presensi dari cloud Supabase secara live.
+   * Memastikan data yang diisi dari perangkat anggota langsung masuk ke web pengurus.
+   */
+  public async syncFromCloud(): Promise<{ success: boolean; count: number }> {
+    if (!this.supabase || this.isSyncing) {
+      return { success: false, count: 0 };
+    }
+    this.isSyncing = true;
+    try {
+      // 1. Ambil profiles Supabase untuk mapping UUID <-> NIS
+      if (!this.cloudProfilesCache) {
+        const { data: pData } = await this.supabase.from('profiles').select('id, nis');
+        if (pData) {
+          this.cloudProfilesCache = pData;
+        }
+      }
+
+      const uuidToNis = new Map<string, string>();
+      if (this.cloudProfilesCache) {
+        for (const p of this.cloudProfilesCache) {
+          uuidToNis.set(p.id, p.nis);
+        }
+      }
+
+      // 2. Ambil data checkin terbaru dari cloud
+      const { data: checkinRows, error } = await this.supabase
+        .from('checkin')
+        .select('*')
+        .order('dibuat_pada', { ascending: false });
+
+      if (error || !checkinRows) {
+        this.isSyncing = false;
+        return { success: false, count: 0 };
+      }
+
+      // 3. Gabungkan dengan data lokal
+      const localList = this.getItem<PresensiIbadah[]>(STORAGE_KEY_PRESENSI, getInitialPresensi());
+      const mergedMap = new Map<string, PresensiIbadah>();
+
+      // Masukkan local terlebih dahulu
+      for (const loc of localList) {
+        const key = `${loc.tanggal}_${loc.user_id}_${loc.ibadah}`;
+        mergedMap.set(key, loc);
+      }
+
+      // Timpa / tambahkan dari cloud (cloud adalah sumber kebenaran multi-device)
+      for (const row of checkinRows) {
+        const nis = uuidToNis.get(row.profile_id);
+        const localProfile = nis ? this.getProfileByNis(nis) : undefined;
+        const localUserId = localProfile?.id || row.profile_id;
+        const ibadah = UUID_TO_IBADAH_MAP[row.jenis_ibadah_id] || 'sholat_dzuhur';
+        const key = `${row.tanggal}_${localUserId}_${ibadah}`;
+
+        const isLate = Boolean(row.catatan_verifikasi?.toLowerCase().includes('terlambat'));
+        const verifStatus: VerifikasiStatus =
+          row.status_verifikasi === 'valid'
+            ? 'terverifikasi'
+            : row.status_verifikasi === 'tidak_valid'
+            ? 'pelanggaran'
+            : 'menunggu';
+
+        const cloudPresensi: PresensiIbadah = {
+          id: row.id,
+          profile_id: localUserId,
+          user_id: localUserId,
+          tanggal: row.tanggal,
+          ibadah,
+          status: row.status === 'izin' ? 'izin_halangan' : (row.status || 'hadir'),
+          is_late: isLate,
+          terlambat: isLate,
+          keterangan: row.keterangan,
+          keterangan_halangan: row.keterangan,
+          saksi: row.saksi,
+          status_verifikasi: verifStatus,
+          catatan_verifikasi: row.catatan_verifikasi,
+          catatan_pengurus: row.catatan_verifikasi,
+          waktu_checkin: row.dibuat_pada,
+          dibuat_pada: row.dibuat_pada,
+          input_mode: 'mandiri',
+          created_at: row.dibuat_pada,
+          updated_at: row.dibuat_pada,
+        };
+
+        mergedMap.set(key, cloudPresensi);
+      }
+
+      const mergedList = Array.from(mergedMap.values()).sort(
+        (a, b) => new Date(b.dibuat_pada || b.tanggal).getTime() - new Date(a.dibuat_pada || a.tanggal).getTime()
+      );
+
+      this.setItem(STORAGE_KEY_PRESENSI, mergedList);
+      this.isSyncing = false;
+      this.notifySyncListeners();
+      return { success: true, count: checkinRows.length };
+    } catch (e) {
+      console.warn('Gagal sinkronisasi dari cloud Supabase:', e);
+      this.isSyncing = false;
+      return { success: false, count: 0 };
+    }
+  }
+
+  /**
+   * Kirim check-in baru ke cloud Supabase secara real-time
+   */
+  public async pushCheckinToCloud(record: PresensiIbadah): Promise<boolean> {
+    if (!this.supabase) return false;
+    try {
+      const profile = this.getProfileById(record.profile_id || record.user_id);
+      if (!profile) return false;
+
+      // Ambil profile UUID dari cache atau query
+      let profileUuid: string | undefined;
+      if (this.cloudProfilesCache) {
+        const found = this.cloudProfilesCache.find((p) => p.nis === profile.nis);
+        if (found) profileUuid = found.id;
+      }
+      if (!profileUuid) {
+        const { data: pData } = await this.supabase
+          .from('profiles')
+          .select('id')
+          .eq('nis', profile.nis)
+          .maybeSingle();
+        if (pData) profileUuid = pData.id;
+      }
+
+      if (!profileUuid) {
+        console.warn('Profil UUID Supabase tidak ditemukan untuk NIS:', profile.nis);
+        return false;
+      }
+
+      const jenisIbadahId = IBADAH_UUID_MAP[record.ibadah || 'sholat_dzuhur'] || IBADAH_UUID_MAP.sholat_dzuhur;
+      const statusDB = record.status === 'izin_halangan' ? 'izin' : 'hadir';
+      const verifDB =
+        record.status_verifikasi === 'terverifikasi'
+          ? 'valid'
+          : record.status_verifikasi === 'pelanggaran' || record.status_verifikasi === 'ditolak'
+          ? 'tidak_valid'
+          : 'menunggu';
+
+      // Cek apakah data presensi tanggal & jenis ibadah ini sudah ada di Supabase
+      const { data: existing } = await this.supabase
+        .from('checkin')
+        .select('id')
+        .eq('profile_id', profileUuid)
+        .eq('tanggal', record.tanggal)
+        .eq('jenis_ibadah_id', jenisIbadahId)
+        .maybeSingle();
+
+      let targetId: string | undefined;
+
+      if (existing?.id) {
+        targetId = existing.id;
+        const { error: updateErr } = await this.supabase
+          .from('checkin')
+          .update({
+            status: statusDB,
+            keterangan: record.keterangan || record.keterangan_halangan || null,
+            saksi: record.saksi || null,
+            status_verifikasi: verifDB,
+            catatan_verifikasi: record.catatan_pengurus || record.catatan_verifikasi || null,
+          })
+          .eq('id', existing.id);
+
+        if (updateErr) {
+          console.warn('Gagal update checkin ke Supabase:', updateErr.message);
+          return false;
+        }
+      } else {
+        const { data: inserted, error: insertErr } = await this.supabase
+          .from('checkin')
+          .insert({
+            profile_id: profileUuid,
+            jenis_ibadah_id: jenisIbadahId,
+            tanggal: record.tanggal,
+            status: statusDB,
+            keterangan: record.keterangan || record.keterangan_halangan || null,
+            saksi: record.saksi || null,
+            status_verifikasi: verifDB,
+            catatan_verifikasi: record.catatan_pengurus || record.catatan_verifikasi || null,
+            dibuat_pada: record.dibuat_pada || new Date().toISOString(),
+          })
+          .select('id')
+          .single();
+
+        if (insertErr) {
+          console.warn('Gagal insert checkin ke Supabase:', insertErr.message);
+          return false;
+        }
+        targetId = inserted?.id;
+      }
+
+      if (targetId) {
+        const presensiList = this.getItem<PresensiIbadah[]>(STORAGE_KEY_PRESENSI, []);
+        const idx = presensiList.findIndex((p) => p.id === record.id);
+        if (idx !== -1) {
+          presensiList[idx].id = targetId;
+          this.setItem(STORAGE_KEY_PRESENSI, presensiList);
+        }
+      }
+
+      return true;
+    } catch (e) {
+      console.warn('Gagal pushCheckinToCloud:', e);
+      return false;
+    }
+  }
+
+  /**
+   * Kirim perubahan verifikasi ke cloud Supabase
+   */
+  public async pushVerifyToCloud(
+    presensiId: string,
+    status: VerifikasiStatus,
+    catatan?: string
+  ): Promise<boolean> {
+    if (!this.supabase) return false;
+    try {
+      const statusDB =
+        status === 'terverifikasi'
+          ? 'valid'
+          : status === 'pelanggaran' || status === 'ditolak'
+          ? 'tidak_valid'
+          : 'menunggu';
+
+      const presensi = this.getPresensiList().find((p) => p.id === presensiId);
+      if (!presensi) return false;
+
+      const profile = presensi.profile || this.getProfileById(presensi.profile_id || presensi.user_id);
+      let profileUuid: string | undefined;
+      if (profile) {
+        if (!this.cloudProfilesCache) {
+          const { data: pData } = await this.supabase.from('profiles').select('id, nis');
+          if (pData) this.cloudProfilesCache = pData;
+        }
+        profileUuid = this.cloudProfilesCache?.find((p) => p.nis === profile.nis)?.id;
+      }
+
+      let query = this.supabase.from('checkin').update({
+        status_verifikasi: statusDB,
+        catatan_verifikasi: catatan || (status === 'terverifikasi' ? 'Diverifikasi langsung oleh pengurus' : null),
+      });
+
+      if (presensiId.includes('-') && presensiId.length === 36) {
+        query = query.eq('id', presensiId);
+      } else if (profileUuid) {
+        const jenisId = IBADAH_UUID_MAP[presensi.ibadah || 'sholat_dzuhur'];
+        query = query
+          .eq('profile_id', profileUuid)
+          .eq('tanggal', presensi.tanggal)
+          .eq('jenis_ibadah_id', jenisId);
+      } else {
+        return false;
+      }
+
+      const { error } = await query;
+      if (error) {
+        console.warn('Gagal pushVerifyToCloud:', error.message);
+        return false;
+      }
+      return true;
+    } catch (e) {
+      console.warn('Gagal pushVerifyToCloud:', e);
+      return false;
+    }
+  }
 
   private getItem<T>(key: string, defaultVal: T): T {
     if (!this.isBrowser) return defaultVal;
@@ -495,6 +810,11 @@ class DataService {
     presensiList.unshift(newRecord);
     this.setItem(STORAGE_KEY_PRESENSI, presensiList);
 
+    // Kirim langsung ke cloud Supabase secara real-time
+    this.pushCheckinToCloud(newRecord).catch((e) => {
+      console.warn('Gagal push checkin ke cloud:', e);
+    });
+
     this.logAudit({
       user_id: params.userId,
       actor_name: profile?.full_name || 'Anggota',
@@ -582,6 +902,11 @@ class DataService {
 
     this.setItem(STORAGE_KEY_PRESENSI, presensiList);
 
+    // Kirim langsung ke cloud Supabase secara real-time
+    this.pushCheckinToCloud(record).catch((e) => {
+      console.warn('Gagal push manual input ke cloud:', e);
+    });
+
     const targetProfile = this.getProfileById(params.targetUserId);
     this.logAudit({
       user_id: pengurus.id,
@@ -621,6 +946,11 @@ class DataService {
     };
 
     this.setItem(STORAGE_KEY_PRESENSI, presensiList);
+
+    // Kirim langsung ke cloud Supabase secara real-time
+    this.pushVerifyToCloud(presensiId, statusVerifikasi, catatan).catch((e) => {
+      console.warn('Gagal push verifikasi ke cloud:', e);
+    });
 
     const actionName = statusVerifikasi === 'pelanggaran' ? 'FLAG_PELANGGARAN' : 'VERIFIKASI';
     this.logAudit({

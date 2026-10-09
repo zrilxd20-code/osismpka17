@@ -78,6 +78,19 @@ export default function AnggotaView({ currentUser, onRefreshData }: AnggotaViewP
   useEffect(() => {
     loadData();
     setFeedback(null);
+
+    // Sinkronisasi dengan cloud Supabase agar riwayat dan status verifikasi terupdate
+    dataService.syncFromCloud().then(() => {
+      loadData();
+    });
+
+    const unsubscribe = dataService.subscribeSync(() => {
+      loadData();
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, [loadData]);
 
   const handleSubmitCheckin = (e: React.FormEvent) => {
