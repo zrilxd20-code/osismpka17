@@ -163,8 +163,8 @@ export default function AnggotaView({ currentUser, onRefreshData }: AnggotaViewP
             <Calendar className="w-3.5 h-3.5 text-slate-400" />
             {formatTanggalIndonesia(getTodayWIB())}
           </span>
-          <span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-[11px]">
-            NISN: {currentUser.nis}
+          <span className="font-semibold bg-emerald-50 text-emerald-800 px-2.5 py-0.5 rounded-full text-[11px]">
+            {currentUser.organisasi} • {currentUser.kelas}
           </span>
         </div>
       </div>

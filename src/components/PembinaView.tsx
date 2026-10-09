@@ -176,7 +176,7 @@ export default function PembinaView({ currentUser }: PembinaViewProps) {
                   <td className="py-3 px-3 font-mono">{formatTanggalIndonesia(item.tanggal)}</td>
                   <td className="py-3 px-3">
                     <div className="font-bold text-slate-900">{item.profile?.full_name}</div>
-                    <div className="text-[10px] text-slate-400 font-mono">NISN: {item.profile?.nis}</div>
+                    <div className="text-[10px] text-slate-400 font-mono">ID: {item.profile?.nis}</div>
                   </td>
                   <td className="py-3 px-3 font-semibold text-slate-700">
                     {item.profile?.organisasi} ({item.profile?.kelas})

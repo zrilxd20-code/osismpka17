@@ -208,7 +208,11 @@ export default function Navbar({ currentUser, onSelectUser, onLogout, isDemoMode
             </span>
             <span className="text-slate-500">•</span>
             <span className="text-slate-600 font-medium">
-              NISN: <span className="font-mono text-slate-800">{currentUser.nis}</span>
+              Kelas: <span className="font-semibold text-slate-800">{currentUser.kelas}</span>
+            </span>
+            <span className="text-slate-500">•</span>
+            <span className="text-slate-600 font-medium">
+              Organisasi: <span className="font-semibold text-slate-800">{currentUser.organisasi}</span>
             </span>
           </div>
 

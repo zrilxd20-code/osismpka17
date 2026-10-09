@@ -14,7 +14,7 @@ export default function HomePage() {
   const [currentUser, setCurrentUser] = useState<Profile | null>(null);
   const [isClient, setIsClient] = useState<boolean>(false);
   const [refreshKey, setRefreshKey] = useState<number>(0);
-  const [isDemoMode, setIsDemoMode] = useState<boolean>(true);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
 
   // Login form state (Hanya Nama Panjang & Password)
   const [nameInput, setNameInput] = useState<string>('');
@@ -24,19 +24,13 @@ export default function HomePage() {
 
   useEffect(() => {
     setIsClient(true);
-    // Cek preferensi mode demo
     const savedDemo = localStorage.getItem('osis_mpk_demo_mode');
-    const demoActive = savedDemo !== null ? savedDemo === 'true' : process.env.NEXT_PUBLIC_DEMO_MODE !== 'false';
+    const demoActive = savedDemo === 'true';
     setIsDemoMode(demoActive);
 
     const user = dataService.getCurrentUser();
     if (user) {
       setCurrentUser(user);
-    } else if (demoActive) {
-      // Default ke Al Qoirul Lathif (Pengurus / Kamu Sendiri) jika pertama kali buka demo
-      const def = DEFAULT_PROFILES[2];
-      dataService.setCurrentUser(def);
-      setCurrentUser(def);
     }
   }, []);
 
@@ -142,26 +136,8 @@ export default function HomePage() {
               Presensi Ibadah OSIS & MPK SMKN 17
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 font-medium">
-              Divisi Agama (A17) • Sholat Dzuhur & Pendalaman Iman
+              Sistem Informasi Presensi Ibadah Mandiri (Sholat Dzuhur & Pendalaman Iman)
             </p>
-          </div>
-
-          {/* Mode Demo Banner Toggle */}
-          <div className={`p-3 rounded-2xl border text-xs flex items-center justify-between ${
-            isDemoMode ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-emerald-50 border-emerald-200 text-emerald-900'
-          }`}>
-            <div className="flex items-center gap-2">
-              <Sparkles className={`w-4 h-4 ${isDemoMode ? 'text-amber-600' : 'text-emerald-600'}`} />
-              <span className="font-semibold">
-                Status: {isDemoMode ? 'Mode Demo Pengujian' : 'Mode Produksi Resmi'}
-              </span>
-            </div>
-            <button
-              onClick={() => handleToggleDemoMode(!isDemoMode)}
-              className="text-[11px] font-bold underline hover:opacity-80"
-            >
-              {isDemoMode ? 'Matikan' : 'Aktifkan'}
-            </button>
           </div>
 
           {/* Form Login Mandiri (Nama Panjang & Password) */}
@@ -255,67 +231,8 @@ export default function HomePage() {
             </button>
           </form>
 
-          {/* Shortcut Masuk Cepat jika Mode Demo Aktif */}
-          {isDemoMode && (
-            <div className="pt-2 border-t border-slate-100 space-y-2">
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center">
-                Atau Masuk Cepat Sebagai Akun Uji:
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <button
-                  onClick={() => handleSelectUser(DEFAULT_PROFILES[2])}
-                  className="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-bold text-left transition-all"
-                >
-                  <div className="text-[10px] text-emerald-600 uppercase">Pengurus (Kamu)</div>
-                  <div className="truncate">Al Qoirul Lathif</div>
-                </button>
-
-                <button
-                  onClick={() => handleSelectUser(DEFAULT_PROFILES[17])}
-                  className="p-2.5 rounded-xl border border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-900 font-bold text-left transition-all"
-                >
-                  <div className="text-[10px] text-teal-600 uppercase">Pengurus Kristen</div>
-                  <div className="truncate">Maria Jame</div>
-                </button>
-
-                <button
-                  onClick={() => handleSelectUser(DEFAULT_PROFILES[1])}
-                  className="p-2.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-900 font-bold text-left transition-all"
-                >
-                  <div className="text-[10px] text-blue-600 uppercase">Anggota (Islam)</div>
-                  <div className="truncate">A Isy Mifta</div>
-                </button>
-
-                <button
-                  onClick={() => handleSelectUser(DEFAULT_PROFILES[7])}
-                  className="p-2.5 rounded-xl border border-sky-200 bg-sky-50 hover:bg-sky-100 text-sky-900 font-bold text-left transition-all"
-                >
-                  <div className="text-[10px] text-sky-600 uppercase">Anggota (Kristen)</div>
-                  <div className="truncate">Bintang Very</div>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => handleSelectUser(DEFAULT_PROFILES[39])}
-                  className="p-2.5 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-900 font-bold text-center transition-all text-xs"
-                >
-                  <div className="text-[10px] text-purple-600 uppercase">Pembina OSIS</div>
-                  <div className="truncate">Nurkholis Aiman</div>
-                </button>
-                <button
-                  onClick={() => handleSelectUser(DEFAULT_PROFILES[40])}
-                  className="p-2.5 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-900 font-bold text-center transition-all text-xs"
-                >
-                  <div className="text-[10px] text-purple-600 uppercase">Pembina MPK</div>
-                  <div className="truncate">Maria Ulfa</div>
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="text-center text-[11px] text-slate-400">
-            Divisi Keagamaan (A17) OSIS & MPK SMKN 17 • Waktu Server: WIB (UTC+7)
+          <div className="text-center pt-3 border-t border-slate-100 text-[11px] text-slate-400">
+            © 2026 Divisi 1 Keagamaan • OSIS & MPK SMKN 17 Jakarta
           </div>
         </div>
       </div>
@@ -476,17 +393,8 @@ export default function HomePage() {
           </div>
 
           <div className="text-[11px] text-slate-400">
-            Pencatatan Ibadah OSIS & MPK • Sholat Dzuhur & Pendalaman Iman • Waktu Server WIB
+            © 2026 Divisi 1 Keagamaan • OSIS & MPK SMKN 17 Jakarta
           </div>
-
-          {!isDemoMode && (
-            <button
-              onClick={() => handleToggleDemoMode(true)}
-              className="text-[10px] text-slate-400 hover:text-emerald-600 underline"
-            >
-              Aktifkan kembali Mode Demo Pengujian
-            </button>
-          )}
         </div>
       </footer>
     </div>

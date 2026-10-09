@@ -261,7 +261,7 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
   const handleAddMember = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newNis.trim() || !newName.trim()) {
-      alert('NIS dan Nama wajib diisi.');
+      alert('ID dan Nama anggota wajib diisi.');
       return;
     }
 
@@ -461,7 +461,7 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
                 <input
                   type="text"
-                  placeholder="Cari nama atau NISN..."
+                  placeholder="Cari nama anggota..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs w-44 sm:w-56"
@@ -564,7 +564,7 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
                       <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
                         <td className="py-3 px-3">
                           <div className="font-bold text-slate-900">{item.profile?.full_name}</div>
-                          <div className="text-[11px] text-slate-400 font-mono">NISN: {item.profile?.nis}</div>
+                          <div className="text-[11px] text-slate-400 font-mono">ID: {item.profile?.nis}</div>
                         </td>
 
                         <td className="py-3 px-3">
@@ -867,7 +867,7 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
                     >
                       <div>
                         <div className="flex items-center justify-between">
-                          <span className="font-mono text-[10px] text-slate-400">NISN: {u.nis}</span>
+                          <span className="font-mono text-[10px] text-slate-400">ID: {u.nis}</span>
                           <span
                             className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                               u.status_cek === 'sesuai'
@@ -987,7 +987,7 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
                 <thead className="sticky top-0 bg-slate-100 text-slate-700 font-bold z-10">
                   <tr className="border-b border-slate-200">
                     <th className="py-2 px-3">Tanggal</th>
-                    <th className="py-2 px-3">NISN</th>
+                    <th className="py-2 px-3">ID Anggota</th>
                     <th className="py-2 px-3">Nama Lengkap</th>
                     <th className="py-2 px-3">Organisasi</th>
                     <th className="py-2 px-3">Kelas</th>
@@ -1134,7 +1134,7 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
             <form onSubmit={handleAddMember} className="space-y-3 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">NISN / NIS Siswa</label>
+                  <label className="block font-bold text-slate-700 mb-1">ID / Nomor Anggota</label>
                   <input
                     type="text"
                     value={newNis}
