@@ -103,10 +103,10 @@ export default function Navbar({ currentUser, onSelectUser, onLogout, isDemoMode
           <div className="flex items-center justify-between h-16">
             {/* Logo & App Name */}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl overflow-hidden shadow-md shadow-emerald-500/20 ring-1 ring-emerald-400/30 shrink-0 bg-slate-900 flex items-center justify-center" title="A17: Divisi Agama SMKN 17">
+              <div className="w-10 h-10 rounded-xl overflow-hidden shadow-xs ring-1 ring-slate-200 shrink-0 bg-white flex items-center justify-center" title="A17: Divisi Agama SMKN 17">
                 <Image
                   src="/logo-a17.jpg"
-                  alt="Logo A17"
+                  alt="Logo A17 Keagamaan Divisi 1"
                   width={40}
                   height={40}
                   className="w-full h-full object-cover"
