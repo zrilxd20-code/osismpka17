@@ -131,7 +131,7 @@ export default function Navbar({ currentUser, onSelectUser, onLogout, isDemoMode
               </div>
 
               {/* Active User Button */}
-              {isDemoMode ? (
+              {isDemoMode && currentUser.role === 'pengurus' ? (
                 <button
                   onClick={() => setShowUserModal(true)}
                   className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/50 transition-all text-left group"
@@ -216,7 +216,7 @@ export default function Navbar({ currentUser, onSelectUser, onLogout, isDemoMode
             </span>
           </div>
 
-          {isDemoMode && (
+          {isDemoMode && currentUser.role === 'pengurus' && (
             <button
               onClick={() => setShowUserModal(true)}
               className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 shrink-0 ml-2"
@@ -228,8 +228,8 @@ export default function Navbar({ currentUser, onSelectUser, onLogout, isDemoMode
         </div>
       </header>
 
-      {/* Role Switcher Modal */}
-      {showUserModal && (
+      {/* Role Switcher Modal (Hanya Pengurus) */}
+      {showUserModal && currentUser.role === 'pengurus' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200">
             <div className="px-6 py-4 bg-gradient-to-r from-emerald-600 to-teal-700 text-white flex items-center justify-between">

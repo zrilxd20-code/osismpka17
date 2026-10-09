@@ -26,33 +26,52 @@ export default function HomePage() {
     setIsClient(true);
     const savedDemo = localStorage.getItem('osis_mpk_demo_mode');
     const demoActive = savedDemo === 'true';
-    setIsDemoMode(demoActive);
 
     const user = dataService.getCurrentUser();
     if (user) {
       setCurrentUser(user);
+      // Mode demo HANYA boleh aktif jika role adalah pengurus
+      if (user.role === 'pengurus') {
+        setIsDemoMode(demoActive);
+      } else {
+        setIsDemoMode(false);
+        localStorage.setItem('osis_mpk_demo_mode', 'false');
+      }
+    } else {
+      setIsDemoMode(false);
     }
   }, []);
 
   const handleSelectUser = (user: Profile) => {
     dataService.setCurrentUser(user);
     setCurrentUser(user);
+    // Jika beralih ke role bukan pengurus, otomatis matikan mode demo
+    if (user.role !== 'pengurus') {
+      setIsDemoMode(false);
+      localStorage.setItem('osis_mpk_demo_mode', 'false');
+    }
     setRefreshKey((prev) => prev + 1);
   };
 
   const handleLogout = () => {
     dataService.logout();
     setCurrentUser(null);
+    setIsDemoMode(false);
+    localStorage.setItem('osis_mpk_demo_mode', 'false');
     setRefreshKey((prev) => prev + 1);
   };
 
   const handleToggleDemoMode = (val: boolean) => {
+    if (val && currentUser && currentUser.role !== 'pengurus') {
+      alert('Mode demo hanya dapat diakses oleh Pengurus Keagamaan.');
+      return;
+    }
     setIsDemoMode(val);
     localStorage.setItem('osis_mpk_demo_mode', String(val));
     if (!val) {
       handleLogout();
     } else {
-      const def = DEFAULT_PROFILES[2];
+      const def = DEFAULT_PROFILES[2]; // Al Qoirul (Pengurus)
       handleSelectUser(def);
     }
   };
@@ -308,10 +327,10 @@ export default function HomePage() {
         currentUser={currentUser}
         onSelectUser={handleSelectUser}
         onLogout={handleLogout}
-        isDemoMode={isDemoMode}
+        isDemoMode={isDemoMode && currentUser.role === 'pengurus'}
       />
 
-      {isDemoMode && (
+      {isDemoMode && currentUser.role === 'pengurus' && (
         <div className="border-b border-stone-800 bg-stone-900 px-4 py-2 text-stone-200">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2">
             <p className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.12em]">

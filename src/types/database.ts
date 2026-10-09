@@ -25,6 +25,7 @@ export interface Profile {
   role: UserRole;
   aktif: boolean;
   is_active: boolean; // Kompatibilitas frontend
+  jenis_kelamin?: 'laki-laki' | 'perempuan';
   must_change_password?: boolean;
   created_at: string;
   updated_at: string;

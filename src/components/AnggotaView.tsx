@@ -3,7 +3,14 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Profile, PresensiIbadah, SettingsTimeWindow, IbadahType, PresensiStatus } from '@/types/database';
 import { dataService } from '@/lib/data-service';
-import { getTodayWIB, formatTanggalIndonesia, formatJamWIB, isWithinTimeWindow } from '@/lib/time-utils';
+import {
+  getTodayWIB,
+  formatTanggalIndonesia,
+  formatJamWIB,
+  isWithinTimeWindow,
+  getDetailHariWIB,
+  getLabelIbadahKontekstual,
+} from '@/lib/time-utils';
 import confetti from 'canvas-confetti';
 import {
   CheckCircle2,
@@ -18,6 +25,7 @@ import {
   XCircle,
   HelpCircle,
   Sparkles,
+  MapPin,
 } from 'lucide-react';
 
 interface AnggotaViewProps {
@@ -38,13 +46,21 @@ export default function AnggotaView({ currentUser, onRefreshData }: AnggotaViewP
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  // Informasi kalender & sistem hari Jumat
+  const hariDetail = useMemo(() => getDetailHariWIB(), []);
+
   // Jenis ibadah ditentukan dari agama profil
   const ibadahType: IbadahType = useMemo(() => {
     return currentUser.agama === 'islam' ? 'sholat_dzuhur' : 'pendalaman_iman';
   }, [currentUser.agama]);
 
-  const ibadahLabel = ibadahType === 'sholat_dzuhur' ? 'Sholat Dzuhur Berjamaah' : 'Pendalaman Iman Kristen/Katolik';
-  const lokasiLabel = ibadahType === 'sholat_dzuhur' ? 'Musholla Utama SMKN 17' : 'Ruang Kerohanian Kristen/Katolik';
+  // Label kontekstual (menyesuaikan hari Jumat & jenis kelamin)
+  const contextualInfo = useMemo(() => {
+    return getLabelIbadahKontekstual(ibadahType, currentUser.jenis_kelamin);
+  }, [ibadahType, currentUser.jenis_kelamin]);
+
+  const ibadahLabel = contextualInfo.label;
+  const lokasiLabel = contextualInfo.subLabel;
 
   const currentSetting = useMemo(() => {
     return settings.find((s) => s.ibadah === ibadahType);
@@ -175,13 +191,56 @@ export default function AnggotaView({ currentUser, onRefreshData }: AnggotaViewP
         <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
           <span className="flex items-center gap-1.5 font-medium">
             <Calendar className="w-3.5 h-3.5 text-slate-400" />
-            {formatTanggalIndonesia(getTodayWIB())}
+            <span className="font-semibold text-slate-800">{hariDetail.namaHari},</span> {formatTanggalIndonesia(getTodayWIB())}
           </span>
           <span className="font-semibold bg-emerald-50 text-emerald-800 px-2.5 py-0.5 rounded-full text-[11px]">
             {currentUser.organisasi} • {currentUser.kelas}
           </span>
         </div>
       </div>
+
+      {/* BANNER KHUSUS HARI JUMAT (JUMATAN) */}
+      {hariDetail.isJumat && (
+        <div className="bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-900 text-white p-4 sm:p-5 rounded-2xl shadow-sm border border-emerald-700/50 space-y-2">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-400 text-slate-900">
+              🕌 Hari Jumat Berkah
+            </span>
+            <span className="text-[11px] font-mono text-emerald-300">
+              Batas Normal 18:00 · Toleransi 21:00 WIB
+            </span>
+          </div>
+
+          <h3 className="font-extrabold text-sm sm:text-base text-white">
+            {currentUser.agama === 'islam'
+              ? currentUser.jenis_kelamin === 'laki-laki'
+                ? 'Kewajiban Sholat Jumat Berjamaah di Masjid'
+                : 'Sholat Dzuhur 4 Rakaat / Kajian Keputihan'
+              : 'Pendalaman Iman & Ibadah Hari Jumat'}
+          </h3>
+
+          <p className="text-xs text-emerald-200/90 leading-relaxed">
+            {currentUser.agama === 'islam'
+              ? currentUser.jenis_kelamin === 'laki-laki'
+                ? 'Seluruh siswa laki-laki (putra) diwajibkan menunaikan Sholat Jumat berjamaah di Masjid Baitul Ilmi SMKN 17 atau masjid sekitar, mendengarkan khutbah, dan mengisi laporan kehadiran.'
+                : 'Siswi perempuan (putri) menunaikan Sholat Dzuhur berjamaah/munfarid atau mengikuti keputihan. Jika sedang haid, silakan pilih status Izin Halangan Syar\'i.'
+              : 'Siswa Kristen/Katolik mengikuti persekutuan doa dan ibadah pendalaman firman di ruang kebaktian/kelas kerohanian sekolah.'}
+          </p>
+        </div>
+      )}
+
+      {/* BANNER HARI LIBUR AKHIR PEKAN (SABTU / MINGGU) */}
+      {hariDetail.isWeekend && (
+        <div className="bg-amber-50 border border-amber-300 text-amber-900 p-4 rounded-2xl shadow-xs space-y-1">
+          <div className="flex items-center gap-2 font-bold text-xs">
+            <Info className="w-4 h-4 text-amber-600" />
+            <span>Akhir Pekan: Libur Sekolah ({hariDetail.namaHari})</span>
+          </div>
+          <p className="text-xs text-amber-800 leading-relaxed">
+            Hari ini adalah akhir pekan / hari libur sekolah ({hariDetail.tanggalFormat}). Tidak ada kewajiban presensi ibadah harian sekolah.
+          </p>
+        </div>
+      )}
 
       {/* FEEDBACK TOAST / ALERT */}
       {feedback && (
@@ -368,28 +427,30 @@ export default function AnggotaView({ currentUser, onRefreshData }: AnggotaViewP
             </div>
           )}
 
-          {/* Switch Simulasi Jendela Buka untuk Uji Coba */}
-          <div className="mt-4 p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
-            <span className="text-slate-600 font-medium flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              Mode Demo: Buka Jendela Check-in
-            </span>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={bypassTime}
-                onChange={(e) => setBypassTime(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-9 h-5 bg-slate-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
-            </label>
-          </div>
+          {/* Switch Simulasi Jendela Buka untuk Uji Coba (HANYA DITAMPILKAN KEPADA PENGURUS) */}
+          {currentUser.role === 'pengurus' && (
+            <div className="mt-4 p-3 rounded-xl bg-amber-50/80 border border-amber-200 flex items-center justify-between text-xs">
+              <span className="text-amber-900 font-semibold flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                Khusus Pengurus (Demo/Test): Buka Jendela Check-in
+              </span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={bypassTime}
+                  onChange={(e) => setBypassTime(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-slate-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600"></div>
+              </label>
+            </div>
+          )}
 
           <form onSubmit={handleSubmitCheckin} className="mt-5 space-y-4">
             {/* Pilihan Status: Hadir vs Izin/Halangan */}
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                Pilih Status Kehadiran
+                Pilih Status Kehadiran {hariDetail.isJumat && '• Ibadah Hari Jumat'}
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <button
@@ -404,7 +465,7 @@ export default function AnggotaView({ currentUser, onRefreshData }: AnggotaViewP
                   <CheckCircle2
                     className={`w-5 h-5 ${status === 'hadir' ? 'text-emerald-600' : 'text-slate-400'}`}
                   />
-                  <span>Hadir Ibadah</span>
+                  <span>{hariDetail.isJumat && currentUser.jenis_kelamin === 'laki-laki' ? 'Hadir Sholat Jumat' : 'Hadir Ibadah'}</span>
                 </button>
 
                 <button
@@ -469,7 +530,8 @@ export default function AnggotaView({ currentUser, onRefreshData }: AnggotaViewP
             {/* Kolom Saksi (Opsional) */}
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Nama Teman / Saksi <span className="text-slate-400 font-normal lowercase">(opsional)</span>
+                {hariDetail.isJumat ? 'Nama Rekan Sholat Jumat / Teman Satu Shaf' : 'Nama Teman / Saksi'}{' '}
+                <span className="text-slate-400 font-normal lowercase">(opsional)</span>
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -479,12 +541,18 @@ export default function AnggotaView({ currentUser, onRefreshData }: AnggotaViewP
                   type="text"
                   value={saksi}
                   onChange={(e) => setSaksi(e.target.value)}
-                  placeholder="Nama rekan yang beribadah bersama Anda"
+                  placeholder={
+                    hariDetail.isJumat
+                      ? 'mis. Nama teman sholat Jumat di masjid / pengurus satu shaf'
+                      : 'Nama rekan yang beribadah bersama Anda'
+                  }
                   className="w-full text-xs pl-9 pr-3 py-3 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 bg-white"
                 />
               </div>
               <p className="text-[11px] text-slate-400 mt-1">
-                Membantu pengurus keagamaan dalam memverifikasi kehadiran.
+                {hariDetail.isJumat
+                  ? 'Membantu pengurus keagamaan memverifikasi kehadiran sholat Jumat.'
+                  : 'Membantu pengurus keagamaan dalam memverifikasi kehadiran.'}
               </p>
             </div>
 

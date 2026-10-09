@@ -199,3 +199,119 @@ export function isWithinTimeWindow(
     currentTimeWIB: currentTimeStr,
   };
 }
+
+/**
+ * Cek apakah tanggal/hari saat ini adalah Hari Jumat di WIB
+ */
+export function isHariJumat(dateStr?: string): boolean {
+  const d = dateStr ? new Date(dateStr + 'T12:00:00+07:00') : new Date();
+  const dayFormatter = new Intl.DateTimeFormat('en-US', {
+    weekday: 'short',
+    timeZone: 'Asia/Jakarta',
+  });
+  return dayFormatter.format(d) === 'Fri';
+}
+
+/**
+ * Cek apakah tanggal/hari saat ini adalah Akhir Pekan (Sabtu / Minggu) di WIB
+ */
+export function isWeekend(dateStr?: string): boolean {
+  const d = dateStr ? new Date(dateStr + 'T12:00:00+07:00') : new Date();
+  const dayFormatter = new Intl.DateTimeFormat('en-US', {
+    weekday: 'short',
+    timeZone: 'Asia/Jakarta',
+  });
+  const day = dayFormatter.format(d);
+  return day === 'Sat' || day === 'Sun';
+}
+
+export interface DetailHariWIB {
+  namaHari: string; // "Senin", "Jumat", dll.
+  isJumat: boolean;
+  isWeekend: boolean;
+  isHariSekolah: boolean;
+  tanggalFormat: string; // "Jumat, 9 Oktober 2026"
+  deskripsiJumat: string;
+}
+
+/**
+ * Dapatkan detail lengkap nama hari, tanggal, dan status khusus (Jumatan / Libur) di WIB
+ */
+export function getDetailHariWIB(dateStr?: string): DetailHariWIB {
+  const targetDateStr = dateStr || getTodayWIB();
+  const d = new Date(targetDateStr + 'T12:00:00+07:00');
+  
+  const dayFormatter = new Intl.DateTimeFormat('id-ID', {
+    weekday: 'long',
+    timeZone: 'Asia/Jakarta',
+  });
+  const namaHari = dayFormatter.format(d);
+  const jumat = isHariJumat(targetDateStr);
+  const weekend = isWeekend(targetDateStr);
+
+  return {
+    namaHari,
+    isJumat: jumat,
+    isWeekend: weekend,
+    isHariSekolah: !weekend,
+    tanggalFormat: formatTanggalIndonesia(targetDateStr),
+    deskripsiJumat: jumat
+      ? 'Hari Jumat Berkah: Sholat Jumat Berjamaah di Masjid untuk Putra & Sholat Dzuhur/Keputihan untuk Putri'
+      : weekend
+      ? 'Hari Libur Akhir Pekan (Sabtu/Minggu): Tidak ada kewajiban presensi ibadah harian sekolah'
+      : 'Hari Sekolah Aktif: Sholat Dzuhur Berjamaah / Pendalaman Iman',
+  };
+}
+
+/**
+ * Dapatkan label ibadah yang kontekstual (menyesuaikan jika hari Jumat & gender anggota)
+ */
+export function getLabelIbadahKontekstual(
+  ibadah: string,
+  jenisKelamin?: 'laki-laki' | 'perempuan',
+  dateStr?: string
+): { label: string; subLabel: string; isJumatan: boolean } {
+  const jumat = isHariJumat(dateStr);
+
+  if (ibadah === 'sholat_dzuhur') {
+    if (jumat) {
+      if (jenisKelamin === 'laki-laki') {
+        return {
+          label: 'Sholat Jumat Berjamaah',
+          subLabel: 'Wajib Berjamaah di Masjid (Khutbah & 2 Rakaat)',
+          isJumatan: true,
+        };
+      } else if (jenisKelamin === 'perempuan') {
+        return {
+          label: 'Sholat Dzuhur / Keputihan',
+          subLabel: 'Sholat Dzuhur 4 Rakaat atau Kajian Keputihan Jumat',
+          isJumatan: true,
+        };
+      }
+      return {
+        label: 'Sholat Jumat / Dzuhur',
+        subLabel: 'Jumat Berkah: Sholat Jumat (Putra) / Dzuhur (Putri)',
+        isJumatan: true,
+      };
+    }
+    return {
+      label: 'Sholat Dzuhur Berjamaah',
+      subLabel: 'Masjid SMKN 17 / Tempat Ibadah',
+      isJumatan: false,
+    };
+  }
+
+  // Pendalaman Iman
+  if (jumat) {
+    return {
+      label: 'Pendalaman Iman & Ibadah Jumat',
+      subLabel: 'Persekutuan Doa & Pendalaman Alkitab Hari Jumat',
+      isJumatan: false,
+    };
+  }
+  return {
+    label: 'Pendalaman Iman Kristen/Katolik',
+    subLabel: 'Ruang Kebaktian / Kelas Agama',
+    isJumatan: false,
+  };
+}

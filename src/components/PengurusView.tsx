@@ -12,7 +12,13 @@ import {
   AuditLog,
 } from '@/types/database';
 import { dataService } from '@/lib/data-service';
-import { getTodayWIB, formatTanggalIndonesia, formatJamWIB } from '@/lib/time-utils';
+import {
+  getTodayWIB,
+  formatTanggalIndonesia,
+  formatJamWIB,
+  getDetailHariWIB,
+  isHariJumat,
+} from '@/lib/time-utils';
 import { exportToExcel, exportToPDF } from '@/lib/export-utils';
 import {
   CheckCircle,
@@ -32,6 +38,7 @@ import {
   Sparkles,
   RefreshCw,
   Database,
+  Calendar,
 } from 'lucide-react';
 
 interface PengurusViewProps {
@@ -196,6 +203,11 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
   const selectedDatePresensi = useMemo(() => {
     return presensiList.filter((p) => p.tanggal === selectedDate);
   }, [presensiList, selectedDate]);
+
+  // Info kalender & sistem hari Jumat untuk tanggal terpilih
+  const hariInfoSelected = useMemo(() => {
+    return getDetailHariWIB(selectedDate);
+  }, [selectedDate]);
 
   // Identifikasi Anggota yang BELUM Check-in pada tanggal terpilih
   const uncheckinMembers = useMemo(() => {
@@ -536,9 +548,9 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
       {/* ============================================================== */}
       {activeTab === 'monitoring' && (
         <div className="space-y-6">
-          {/* FILTER BAR */}
+          {/* FILTER BAR & INFORMASI HARI */}
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="font-bold text-slate-700">Tanggal:</span>
               <input
                 type="date"
@@ -546,6 +558,20 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
                 onChange={(e) => setSelectedDate(e.target.value)}
                 className="px-3 py-1.5 rounded-lg border border-slate-200 font-semibold text-slate-800 bg-slate-50"
               />
+              <span className="font-bold text-slate-700 bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-200 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                <span>{hariInfoSelected.namaHari}</span>
+              </span>
+              {hariInfoSelected.isJumat && (
+                <span className="bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5">
+                  🕌 Hari Jumat (Sholat Jumat / Keputihan)
+                </span>
+              )}
+              {hariInfoSelected.isWeekend && (
+                <span className="bg-rose-100 text-rose-900 border border-rose-300 px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5">
+                  🌴 Libur Akhir Pekan ({hariInfoSelected.namaHari})
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
@@ -676,8 +702,17 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
 
                         <td className="py-3 px-3">
                           <span className="font-medium text-slate-800">
-                            {item.ibadah === 'sholat_dzuhur' ? 'Dzuhur' : 'Pend. Iman'}
+                            {item.ibadah === 'sholat_dzuhur'
+                              ? hariInfoSelected.isJumat
+                                ? item.profile?.jenis_kelamin === 'laki-laki'
+                                  ? 'Sholat Jumat'
+                                  : 'Dzuhur / Keputihan'
+                                : 'Sholat Dzuhur'
+                              : 'Pend. Iman'}
                           </span>
+                          {hariInfoSelected.isJumat && item.ibadah === 'sholat_dzuhur' && (
+                            <span className="block text-[9px] font-bold text-amber-700">🕌 Jumat</span>
+                          )}
                         </td>
 
                         <td className="py-3 px-3">
@@ -839,9 +874,22 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
                   onChange={(e) => setManualIbadah(e.target.value as IbadahType)}
                   className="w-full p-2.5 rounded-xl border border-slate-200 bg-white font-semibold"
                 >
-                  <option value="sholat_dzuhur">Sholat Dzuhur</option>
-                  <option value="pendalaman_iman">Pendalaman Iman</option>
+                  <option value="sholat_dzuhur">
+                    {isHariJumat(manualDate)
+                      ? 'Sholat Jumat (Putra) / Dzuhur & Keputihan (Putri)'
+                      : 'Sholat Dzuhur'}
+                  </option>
+                  <option value="pendalaman_iman">
+                    {isHariJumat(manualDate)
+                      ? 'Pendalaman Iman & Ibadah Jumat'
+                      : 'Pendalaman Iman'}
+                  </option>
                 </select>
+                {isHariJumat(manualDate) && (
+                  <p className="text-[11px] text-amber-700 mt-1 font-medium">
+                    🕌 Tanggal yang dipilih jatuh pada hari Jumat (Wajib Sholat Jumat untuk putra).
+                  </p>
+                )}
               </div>
             </div>
 
