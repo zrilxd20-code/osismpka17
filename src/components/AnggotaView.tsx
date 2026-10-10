@@ -227,6 +227,19 @@ export default function AnggotaView({ currentUser, onRefreshData }: AnggotaViewP
         </div>
       )}
 
+      {/* BANNER TANGGAL MERAH / HARI LIBUR NASIONAL */}
+      {hariDetail.isLiburNasional && (
+        <div className="bg-rose-50 border border-rose-300 text-rose-900 p-4 rounded-2xl shadow-xs space-y-1">
+          <div className="flex items-center gap-2 font-bold text-xs">
+            <Info className="w-4 h-4 text-rose-600" />
+            <span>🏖️ Tanggal Merah: {hariDetail.namaLiburNasional}</span>
+          </div>
+          <p className="text-xs text-rose-800 leading-relaxed">
+            Hari ini adalah libur nasional resmi ({hariDetail.tanggalFormat}). Tidak ada kewajiban presensi ibadah harian sekolah.
+          </p>
+        </div>
+      )}
+
       {/* BANNER HARI LIBUR AKHIR PEKAN (SABTU / MINGGU) */}
       {hariDetail.isWeekend && (
         <div className="bg-amber-50 border border-amber-300 text-amber-900 p-4 rounded-2xl shadow-xs space-y-1">

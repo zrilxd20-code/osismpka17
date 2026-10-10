@@ -614,6 +614,11 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
                   🌴 Libur Akhir Pekan ({hariInfoSelected.namaHari})
                 </span>
               )}
+              {hariInfoSelected.isLiburNasional && (
+                <span className="bg-rose-100 text-rose-900 border border-rose-300 px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5">
+                  🏖️ Libur Nasional ({hariInfoSelected.namaLiburNasional})
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">

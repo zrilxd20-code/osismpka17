@@ -3,6 +3,8 @@
 // Waktu SELALU dihitung di server, tidak pernah mempercayai jam perangkat klien
 // =====================================================================
 
+import { getHariLiburNasional } from './time-utils';
+
 /**
  * Tanggal saat ini di zona Asia/Jakarta format YYYY-MM-DD
  */
@@ -93,7 +95,19 @@ export function isServerWithinTimeWindow(
       isOpen: false,
       isLate: false,
       status: 'closed',
-      reason: 'Hari ini tidak dijadwalkan untuk check-in ibadah (hanya hari sekolah aktif).',
+      reason: 'Hari ini tidak dijadwalkan untuk check-in ibadah (libur akhir pekan Sabtu/Minggu).',
+      currentTimeWIB: currentTimeStr,
+    };
+  }
+
+  // Cek apakah tanggal merah / hari libur nasional
+  const liburNasional = getHariLiburNasional(getServerDateWIB());
+  if (liburNasional) {
+    return {
+      isOpen: false,
+      isLate: false,
+      status: 'closed',
+      reason: `Hari ini libur nasional (${liburNasional}). Tidak ada presensi ibadah.`,
       currentTimeWIB: currentTimeStr,
     };
   }

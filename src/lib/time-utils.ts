@@ -129,7 +129,18 @@ export function isWithinTimeWindow(
       isOpen: false,
       isLate: false,
       status: 'closed',
-      reason: 'Hari ini tidak dijadwalkan untuk check-in ibadah (hanya hari sekolah aktif).',
+      reason: 'Hari ini tidak dijadwalkan untuk check-in ibadah (libur akhir pekan Sabtu/Minggu).',
+    };
+  }
+
+  // Cek apakah hari libur nasional / tanggal merah
+  const liburNasional = getHariLiburNasional();
+  if (liburNasional) {
+    return {
+      isOpen: false,
+      isLate: false,
+      status: 'closed',
+      reason: `Hari ini libur nasional (${liburNasional}). Tidak ada kewajiban presensi ibadah.`,
     };
   }
 
@@ -225,10 +236,50 @@ export function isWeekend(dateStr?: string): boolean {
   return day === 'Sat' || day === 'Sun';
 }
 
+/**
+ * Daftar Hari Libur Nasional Resmi (Tanggal Merah Indonesia)
+ */
+export const HARI_LIBUR_NASIONAL: Record<string, string> = {
+  // Tahun 2026
+  '2026-01-01': 'Tahun Baru Masehi 2026',
+  '2026-01-16': 'Isra Mi\'raj Nabi Muhammad SAW',
+  '2026-02-17': 'Tahun Baru Imlek 2577 Kongzili',
+  '2026-03-20': 'Hari Suci Nyepi (Tahun Baru Saka 1948)',
+  '2026-03-21': 'Hari Raya Idul Fitri 1447 H',
+  '2026-03-22': 'Hari Raya Idul Fitri 1447 H',
+  '2026-04-03': 'Wafat Yesus Kristus (Jumat Agung)',
+  '2026-05-01': 'Hari Buruh Internasional',
+  '2026-05-14': 'Kenaikan Yesus Kristus',
+  '2026-05-27': 'Hari Raya Idul Adha 1447 H',
+  '2026-06-01': 'Hari Lahir Pancasila',
+  '2026-06-16': 'Tahun Baru Islam 1448 H',
+  '2026-08-17': 'Hari Kemerdekaan Republik Indonesia ke-81',
+  '2026-08-25': 'Maulid Nabi Muhammad SAW',
+  '2026-12-25': 'Hari Raya Natal',
+};
+
+/**
+ * Cek apakah tanggal tertentu adalah hari libur nasional / tanggal merah
+ */
+export function getHariLiburNasional(dateStr?: string): string | null {
+  const targetDateStr = dateStr || getTodayWIB();
+  return HARI_LIBUR_NASIONAL[targetDateStr] || null;
+}
+
+/**
+ * Cek apakah hari libur (baik akhir pekan Sabtu/Minggu ATAU libur nasional)
+ */
+export function isHariLibur(dateStr?: string): boolean {
+  const targetDateStr = dateStr || getTodayWIB();
+  return isWeekend(targetDateStr) || Boolean(getHariLiburNasional(targetDateStr));
+}
+
 export interface DetailHariWIB {
   namaHari: string; // "Senin", "Jumat", dll.
   isJumat: boolean;
   isWeekend: boolean;
+  isLiburNasional: boolean;
+  namaLiburNasional?: string | null;
   isHariSekolah: boolean;
   tanggalFormat: string; // "Jumat, 9 Oktober 2026"
   deskripsiJumat: string;
@@ -248,15 +299,21 @@ export function getDetailHariWIB(dateStr?: string): DetailHariWIB {
   const namaHari = dayFormatter.format(d);
   const jumat = isHariJumat(targetDateStr);
   const weekend = isWeekend(targetDateStr);
+  const liburNasional = getHariLiburNasional(targetDateStr);
+  const isSekolah = !weekend && !liburNasional;
 
   return {
     namaHari,
     isJumat: jumat,
     isWeekend: weekend,
-    isHariSekolah: !weekend,
+    isLiburNasional: Boolean(liburNasional),
+    namaLiburNasional: liburNasional,
+    isHariSekolah: isSekolah,
     tanggalFormat: formatTanggalIndonesia(targetDateStr),
     deskripsiJumat: jumat
       ? 'Hari Jumat Berkah: Sholat Jumat Berjamaah di Masjid untuk Putra & Sholat Dzuhur/Keputihan untuk Putri'
+      : liburNasional
+      ? `Libur Nasional (${liburNasional}): Tidak ada kewajiban presensi ibadah harian sekolah`
       : weekend
       ? 'Hari Libur Akhir Pekan (Sabtu/Minggu): Tidak ada kewajiban presensi ibadah harian sekolah'
       : 'Hari Sekolah Aktif: Sholat Dzuhur Berjamaah / Pendalaman Iman',
