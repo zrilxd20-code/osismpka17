@@ -41,9 +41,13 @@ export async function createClient() {
  */
 export function createAdminClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://sample.supabase.co';
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sample-key';
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  return createSupabaseClient(supabaseUrl, serviceRoleKey, {
+  if (!serviceRoleKey) {
+    console.warn('[Security Warning] SUPABASE_SERVICE_ROLE_KEY tidak disetel. Admin operations dibatasi.');
+  }
+
+  return createSupabaseClient(supabaseUrl, serviceRoleKey || 'missing-service-key', {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
@@ -53,7 +57,7 @@ export function createAdminClient() {
 
 /**
  * Helper otentikasi di route handlers:
- * Memverifikasi user aktif, role, dan profile dari Supabase Auth atau Mock Demo fallback
+ * Memverifikasi user aktif, role, dan profile dari Supabase Auth Session secara ketat
  */
 export async function getAuthenticatedUserAndRole(req?: NextRequest): Promise<{
   user: Profile | null;
@@ -62,18 +66,7 @@ export async function getAuthenticatedUserAndRole(req?: NextRequest): Promise<{
 }> {
   const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
-  // 1. Cek header demo atau query jika ada
-  if (req) {
-    const demoUserId = req.headers.get('x-user-id');
-    if (demoUserId) {
-      const profile = dataService.getProfileById(demoUserId);
-      if (profile && profile.aktif) {
-        return { user: profile };
-      }
-    }
-  }
-
-  // 2. Cek Supabase Auth Session
+  // 1. Verifikasi Supabase Auth Session Resmi (Prioritas Utama & Wajib untuk Produksi)
   try {
     const supabase = await createClient();
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
@@ -101,8 +94,18 @@ export async function getAuthenticatedUserAndRole(req?: NextRequest): Promise<{
     console.error('Error verifying Supabase user session:', err);
   }
 
-  // 3. Fallback demo mode untuk lingkungan pengujian lokal / pratinjau
-  if (isDemo) {
+  // 2. Mode Demo HANYA aktif jika dikonfigurasi eksplisit secara lokal (Bukan di produksi)
+  if (isDemo && process.env.NODE_ENV !== 'production') {
+    if (req) {
+      const demoUserId = req.headers.get('x-user-id');
+      if (demoUserId) {
+        const profile = dataService.getProfileById(demoUserId);
+        if (profile && profile.aktif) {
+          return { user: profile };
+        }
+      }
+    }
+
     const demoUser = dataService.getCurrentUser();
     if (demoUser && demoUser.aktif) {
       return { user: demoUser };

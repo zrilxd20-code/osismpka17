@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUserAndRole, createClient } from '@/lib/supabase/server';
 import { InputManualSchema, formatZodError } from '@/lib/validations/api-schemas';
 import { getServerTimestampWIB } from '@/lib/server-time';
+import { checkRateLimit } from '@/lib/rate-limiter';
 import { dataService } from '@/lib/data-service';
 
 export async function POST(req: NextRequest) {
@@ -19,6 +20,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { ok: false, error: 'Akses ditolak. Hanya pengurus yang dapat melakukan input manual.' },
         { status: 403 }
+      );
+    }
+
+    // Rate limiting input manual pengurus (maksimal 20 presensi per menit per pengurus)
+    const rateCheck = checkRateLimit(`input-manual-${currentUser.id}`, 20, 60 * 1000);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `Terlalu banyak permintaan input manual berturut-turut. Tunggu ${rateCheck.retryAfterSeconds} detik.`,
+        },
+        { status: 429 }
       );
     }
 

@@ -241,7 +241,7 @@ export default function HomePage() {
                   required
                 />
 
-                {nameInput.trim().length >= 2 && showSuggestions && (() => {
+                {nameInput.trim().length >= 3 && showSuggestions && (() => {
                   const results = dataService.searchProfilesByName(nameInput, 5);
                   if (results.length === 0) return null;
                   return (
@@ -263,9 +263,6 @@ export default function HomePage() {
                               <span className="min-w-0">
                                 <span className="block truncate text-[13px] font-bold text-stone-800">
                                   {p.full_name || p.nama}
-                                </span>
-                                <span className="block truncate font-mono text-[11px] tabular-nums text-stone-500">
-                                  {p.organisasi} · {p.kelas}
                                 </span>
                               </span>
                               <span className="shrink-0 rounded-md border border-[#175e3c]/30 bg-[#e9efe7] px-2 py-1 text-[11px] font-bold text-[#175e3c]">

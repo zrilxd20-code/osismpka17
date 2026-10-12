@@ -14,8 +14,8 @@ import {
 import { getTodayWIB, isWithinTimeWindow } from './time-utils';
 import { createClient as createSupabaseClient, SupabaseClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://walilvzlcomrhbeyfbfy.supabase.co';
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhbGlsdnpsY29tcmhiZXlmYmZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzMzA5MDYsImV4cCI6MjEwNjkwNjkwNn0.PLobmYVn3tdU1_kQdnyHX9zrzUmybHL0xYvbA33EeIg';
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 const IBADAH_UUID_MAP: Record<string, string> = {
   sholat_dzuhur: '0728ae44-4ba3-458f-8427-462d24bc8724',

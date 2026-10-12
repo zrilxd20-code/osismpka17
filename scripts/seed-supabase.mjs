@@ -3,8 +3,13 @@ import fs from 'fs';
 import path from 'path';
 import Papa from 'papaparse';
 
-const url = 'https://walilvzlcomrhbeyfbfy.supabase.co';
-const serviceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhbGlsdnpsY29tcmhiZXlmYmZ5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MTMzMDkwNiwiZXhwIjoyMTA2OTA2OTA2fQ.WkbMnyG1Bu_4nZeh3xHCaoQBBguBLtXY5JmWOVfvnvY';
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://walilvzlcomrhbeyfbfy.supabase.co';
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!serviceRoleKey) {
+  console.error('Error: SUPABASE_SERVICE_ROLE_KEY environment variable is required.');
+  process.exit(1);
+}
 
 async function seed() {
   const supabase = createClient(url, serviceRoleKey);

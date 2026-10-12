@@ -117,7 +117,9 @@ export async function POST(req: NextRequest) {
 
     // 6. Cek Jendela Waktu Server (Asia/Jakarta, Bukan Jam Perangkat)
     // Batas normal: 18:00 WIB, Maksimal ditunggu: 21:00 WIB
-    const bypassHeader = req.headers.get('x-bypass-time-window') === 'true';
+    // HANYA pengurus atau pembina yang boleh meminta bypass (misal perbaikan darurat)
+    const canBypassTimeWindow = ['pengurus', 'pembina'].includes(currentUser.role);
+    const bypassHeader = canBypassTimeWindow && req.headers.get('x-bypass-time-window') === 'true';
     let isLateSubmission = false;
     if (!bypassHeader) {
       const windowCheck = isServerWithinTimeWindow(

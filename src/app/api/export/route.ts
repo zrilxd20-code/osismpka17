@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUserAndRole, createClient } from '@/lib/supabase/server';
 import { getServerDateWIB } from '@/lib/server-time';
+import { checkRateLimit } from '@/lib/rate-limiter';
 import { dataService } from '@/lib/data-service';
 import ExcelJS from 'exceljs';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
@@ -20,6 +21,18 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(
         { ok: false, error: 'Akses ditolak. Hanya pengurus dan pembina yang dapat mengunduh berkas ekspor.' },
         { status: 403 }
+      );
+    }
+
+    // Rate limiting ekspor berkas (maksimal 5 kali per menit per user untuk mencegah scraping/exfiltration data massal)
+    const rateCheck = checkRateLimit(`export-${currentUser.id}`, 5, 60 * 1000);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `Terlalu banyak permintaan unduhan ekspor. Silakan coba lagi dalam ${rateCheck.retryAfterSeconds} detik.`,
+        },
+        { status: 429 }
       );
     }
 

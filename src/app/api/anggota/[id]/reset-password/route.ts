@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUserAndRole, createAdminClient, createClient } from '@/lib/supabase/server';
 import { getServerTimestampWIB } from '@/lib/server-time';
+import { checkRateLimit } from '@/lib/rate-limiter';
 import crypto from 'crypto';
 
 export async function POST(
@@ -22,6 +23,18 @@ export async function POST(
       return NextResponse.json(
         { ok: false, error: 'Akses ditolak. Hanya pengurus yang dapat mereset password anggota.' },
         { status: 403 }
+      );
+    }
+
+    // Rate limiting reset password (maksimal 5 kali per menit per pengurus)
+    const rateCheck = checkRateLimit(`reset-pw-${authResult.user.id}`, 5, 60 * 1000);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `Terlalu banyak permintaan reset password. Tunggu ${rateCheck.retryAfterSeconds} detik.`,
+        },
+        { status: 429 }
       );
     }
 

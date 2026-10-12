@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUserAndRole, createClient } from '@/lib/supabase/server';
 import { parseUploadedFileBuffer, validateImportRows } from '@/lib/impor-parser';
+import { checkRateLimit } from '@/lib/rate-limiter';
 import { dataService } from '@/lib/data-service';
 
 export async function POST(req: NextRequest) {
@@ -19,6 +20,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { ok: false, error: 'Akses ditolak. Hanya pengurus yang dapat mengimpor data siswa.' },
         { status: 403 }
+      );
+    }
+
+    // Rate limiting unggah preview file (maksimal 10 request per menit)
+    const rateCheck = checkRateLimit(`impor-prev-${currentUser.id}`, 10, 60 * 1000);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `Terlalu banyak permintaan preview berkas. Tunggu ${rateCheck.retryAfterSeconds} detik.`,
+        },
+        { status: 429 }
       );
     }
 

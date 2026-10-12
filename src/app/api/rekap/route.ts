@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUserAndRole, createClient } from '@/lib/supabase/server';
 import { getServerDateWIB } from '@/lib/server-time';
+import { checkRateLimit } from '@/lib/rate-limiter';
 import { dataService } from '@/lib/data-service';
 
 export async function GET(req: NextRequest) {
@@ -18,6 +19,18 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(
         { ok: false, error: 'Akses ditolak. Hanya pengurus dan pembina yang dapat mengakses rekapitulasi.' },
         { status: 403 }
+      );
+    }
+
+    // Rate limiting (maksimal 15 per menit per user)
+    const rateCheck = checkRateLimit(`rekap-${currentUser.id}`, 15, 60 * 1000);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `Terlalu banyak permintaan rekapitulasi. Tunggu ${rateCheck.retryAfterSeconds} detik.`,
+        },
+        { status: 429 }
       );
     }
 

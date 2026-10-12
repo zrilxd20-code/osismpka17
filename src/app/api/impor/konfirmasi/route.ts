@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUserAndRole, createAdminClient, createClient } from '@/lib/supabase/server';
 import { ValidRowItem, ErrorRowItem, generateCredentialsExcelBuffer } from '@/lib/impor-parser';
 import { getServerTimestampWIB } from '@/lib/server-time';
+import { checkRateLimit } from '@/lib/rate-limiter';
 import { dataService } from '@/lib/data-service';
 import crypto from 'crypto';
 
@@ -28,6 +29,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { ok: false, error: 'Akses ditolak. Hanya pengurus yang dapat mengonfirmasi impor data.' },
         { status: 403 }
+      );
+    }
+
+    // Rate limiting konfirmasi impor (maksimal 5 eksekusi batch per menit)
+    const rateCheck = checkRateLimit(`impor-konf-${currentUser.id}`, 5, 60 * 1000);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `Terlalu banyak permintaan eksekusi impor. Tunggu ${rateCheck.retryAfterSeconds} detik.`,
+        },
+        { status: 429 }
       );
     }
 

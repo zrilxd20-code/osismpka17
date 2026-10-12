@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUserAndRole, createClient } from '@/lib/supabase/server';
 import { CekAcakGenerateSchema, formatZodError } from '@/lib/validations/api-schemas';
 import { getServerDateWIB, getServerTimestampWIB } from '@/lib/server-time';
+import { checkRateLimit } from '@/lib/rate-limiter';
 import { dataService } from '@/lib/data-service';
 
 export async function POST(req: NextRequest) {
@@ -19,6 +20,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { ok: false, error: 'Akses ditolak. Hanya pengurus yang dapat melakukan pengecekan acak.' },
         { status: 403 }
+      );
+    }
+
+    // Rate limiting pengacakan sidak lapangan (maksimal 10 per menit per pengurus)
+    const rateCheck = checkRateLimit(`cek-acak-${currentUser.id}`, 10, 60 * 1000);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `Terlalu banyak permintaan pengacakan sidak. Tunggu ${rateCheck.retryAfterSeconds} detik.`,
+        },
+        { status: 429 }
       );
     }
 
