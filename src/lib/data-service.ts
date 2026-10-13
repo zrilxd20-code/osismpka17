@@ -118,80 +118,7 @@ export const DEFAULT_SETTINGS: SettingsTimeWindow[] = [
 ];
 
 function getInitialPresensi(): PresensiIbadah[] {
-  const today = getTodayWIB();
-  return [
-    {
-      id: 'pre-1',
-      profile_id: 'usr-02',
-      user_id: 'usr-02',
-      tanggal: today,
-      ibadah: 'sholat_dzuhur',
-      status: 'hadir',
-      saksi: 'Al Qoirul Lathif Nazzril Putra',
-      waktu_checkin: `${today}T11:45:00+07:00`,
-      dibuat_pada: `${today}T11:45:00+07:00`,
-      input_mode: 'mandiri',
-      status_verifikasi: 'terverifikasi',
-      catatan_pengurus: 'Tercatat di musholla',
-      catatan_verifikasi: 'Tercatat di musholla',
-      diverifikasi_oleh: 'usr-03',
-      verified_by: 'usr-03',
-      verified_at: `${today}T12:05:00+07:00`,
-      created_at: `${today}T11:45:00+07:00`,
-      updated_at: `${today}T12:05:00+07:00`,
-    },
-    {
-      id: 'pre-2',
-      profile_id: 'usr-05',
-      user_id: 'usr-05',
-      tanggal: today,
-      ibadah: 'sholat_dzuhur',
-      status: 'izin_halangan',
-      keterangan: 'Halangan syar\'i (haid)',
-      keterangan_halangan: 'Halangan syar\'i (haid)',
-      waktu_checkin: `${today}T11:35:00+07:00`,
-      dibuat_pada: `${today}T11:35:00+07:00`,
-      input_mode: 'mandiri',
-      status_verifikasi: 'terverifikasi',
-      catatan_pengurus: 'Dikonfirmasi',
-      catatan_verifikasi: 'Dikonfirmasi',
-      diverifikasi_oleh: 'usr-03',
-      verified_by: 'usr-03',
-      verified_at: `${today}T12:10:00+07:00`,
-      created_at: `${today}T11:35:00+07:00`,
-      updated_at: `${today}T12:10:00+07:00`,
-    },
-    {
-      id: 'pre-3',
-      profile_id: 'usr-08',
-      user_id: 'usr-08',
-      tanggal: today,
-      ibadah: 'pendalaman_iman',
-      status: 'hadir',
-      saksi: 'Maria Jame',
-      waktu_checkin: `${today}T12:00:00+07:00`,
-      dibuat_pada: `${today}T12:00:00+07:00`,
-      input_mode: 'mandiri',
-      status_verifikasi: 'menunggu',
-      created_at: `${today}T12:00:00+07:00`,
-      updated_at: `${today}T12:00:00+07:00`,
-    },
-    {
-      id: 'pre-4',
-      profile_id: 'usr-18',
-      user_id: 'usr-18',
-      tanggal: today,
-      ibadah: 'pendalaman_iman',
-      status: 'hadir',
-      saksi: 'Bintang Very',
-      waktu_checkin: `${today}T12:05:00+07:00`,
-      dibuat_pada: `${today}T12:05:00+07:00`,
-      input_mode: 'mandiri',
-      status_verifikasi: 'menunggu',
-      created_at: `${today}T12:05:00+07:00`,
-      updated_at: `${today}T12:05:00+07:00`,
-    },
-  ];
+  return [];
 }
 
 class DataService {
@@ -379,6 +306,27 @@ class DataService {
       this.setItem(STORAGE_KEY_PRESENSI, mergedList);
       this.isSyncing = false;
       this.notifySyncListeners();
+
+      // Otomatis unggah record lokal (seperti input manual pengurus pada laptop) yang belum masuk ke cloud
+      const cloudCheckinKeys = new Set(
+        checkinRows.map((r) => {
+          const nis = uuidToNis.get(r.profile_id);
+          const localProfile = nis ? this.getProfileByNis(nis) : undefined;
+          const uId = localProfile?.id || r.profile_id;
+          const ib = UUID_TO_IBADAH_MAP[r.jenis_ibadah_id] || 'sholat_dzuhur';
+          return `${r.tanggal}_${uId}_${ib}`;
+        })
+      );
+
+      for (const loc of localList) {
+        const key = `${loc.tanggal}_${loc.user_id}_${loc.ibadah}`;
+        if (!cloudCheckinKeys.has(key)) {
+          this.pushCheckinToCloud(loc).catch((err) => {
+            console.warn('Auto-sync local to cloud failed:', err);
+          });
+        }
+      }
+
       return { success: true, count: checkinRows.length };
     } catch (e) {
       console.warn('Gagal sinkronisasi dari cloud Supabase:', e);
