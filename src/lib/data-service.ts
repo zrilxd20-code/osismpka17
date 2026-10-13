@@ -236,17 +236,82 @@ class DataService {
    * Memastikan data yang diisi dari perangkat anggota langsung masuk ke web pengurus.
    */
   public async syncFromCloud(): Promise<{ success: boolean; count: number }> {
-    if (!this.supabase || this.isSyncing) {
+    if (this.isSyncing) {
       return { success: false, count: 0 };
     }
     this.isSyncing = true;
     try {
-      // 1. Ambil profiles Supabase untuk mapping UUID <-> NIS
-      if (!this.cloudProfilesCache) {
-        const { data: pData } = await this.supabase.from('profiles').select('id, nis');
-        if (pData) {
-          this.cloudProfilesCache = pData;
+      let pData: { id: string; nis: string }[] | null = null;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let checkinRows: any[] | null = null;
+
+      // 1. Coba ambil dari endpoint aman server /api/sync terlebih dahulu (bypass anon RLS)
+      if (this.isBrowser) {
+        try {
+          const resp = await fetch('/api/sync', { cache: 'no-store' });
+          if (resp.ok) {
+            const json = await resp.json();
+            if (json.ok) {
+              pData = json.profiles;
+              checkinRows = json.checkins;
+            }
+          }
+        } catch {
+          // Abaikan, gunakan fallback langsung ke client Supabase
         }
+      }
+
+      // 2. Fallback langsung ke client Supabase jika /api/sync belum selesai atau offline
+      if (!checkinRows && this.supabase) {
+        if (!this.cloudProfilesCache) {
+          const { data } = await this.supabase.from('profiles').select('id, nis');
+          if (data) this.cloudProfilesCache = data;
+        }
+        const { data, error } = await this.supabase
+          .from('checkin')
+          .select('*')
+          .order('dibuat_pada', { ascending: false });
+        if (!error && data) {
+          checkinRows = data;
+        }
+      }
+
+      if (pData) {
+        this.cloudProfilesCache = pData;
+        // Update profil lokal jika ada profil baru dari cloud
+        const localProfiles = this.getItem<Profile[]>(STORAGE_KEY_PROFILES, DEFAULT_PROFILES);
+        let updatedProfiles = false;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        for (const p of pData as any[]) {
+          const exists = localProfiles.find((lp) => lp.nis === p.nis);
+          if (!exists) {
+            localProfiles.push({
+              id: p.id,
+              nis: p.nis,
+              nama: p.nama,
+              full_name: p.nama,
+              kelas: p.kelas || 'X',
+              organisasi: (p.role === 'pengurus' ? 'OSIS' : (p.jabatan?.includes('MPK') ? 'MPK' : 'OSIS')),
+              jabatan: p.jabatan || 'Anggota',
+              agama: p.agama || 'islam',
+              jenis_kelamin: p.jenis_kelamin || 'laki-laki',
+              role: p.role || 'anggota',
+              aktif: p.aktif ?? true,
+              is_active: p.aktif ?? true,
+              created_at: p.created_at || new Date().toISOString(),
+              updated_at: p.updated_at || new Date().toISOString(),
+            });
+            updatedProfiles = true;
+          }
+        }
+        if (updatedProfiles) {
+          this.setItem(STORAGE_KEY_PROFILES, localProfiles);
+        }
+      }
+
+      if (!checkinRows) {
+        this.isSyncing = false;
+        return { success: false, count: 0 };
       }
 
       const uuidToNis = new Map<string, string>();
@@ -254,17 +319,6 @@ class DataService {
         for (const p of this.cloudProfilesCache) {
           uuidToNis.set(p.id, p.nis);
         }
-      }
-
-      // 2. Ambil data checkin terbaru dari cloud
-      const { data: checkinRows, error } = await this.supabase
-        .from('checkin')
-        .select('*')
-        .order('dibuat_pada', { ascending: false });
-
-      if (error || !checkinRows) {
-        this.isSyncing = false;
-        return { success: false, count: 0 };
       }
 
       // 3. Gabungkan dengan data lokal
@@ -337,11 +391,59 @@ class DataService {
    * Kirim check-in baru ke cloud Supabase secara real-time
    */
   public async pushCheckinToCloud(record: PresensiIbadah): Promise<boolean> {
+    const profile = this.getProfileById(record.profile_id || record.user_id);
+    if (!profile) return false;
+
+    const jenisIbadahId = IBADAH_UUID_MAP[record.ibadah || 'sholat_dzuhur'] || IBADAH_UUID_MAP.sholat_dzuhur;
+    const statusDB = record.status === 'izin_halangan' ? 'izin' : 'hadir';
+    const verifDB =
+      record.status_verifikasi === 'terverifikasi'
+        ? 'valid'
+        : record.status_verifikasi === 'pelanggaran' || record.status_verifikasi === 'ditolak'
+        ? 'tidak_valid'
+        : 'menunggu';
+
+    // 1. Coba kirim via server route /api/sync terlebih dahulu (bypass anon RLS)
+    if (this.isBrowser) {
+      try {
+        const res = await fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'checkin',
+            data: {
+              profile_id: record.profile_id || record.user_id,
+              nis: profile.nis,
+              jenis_ibadah_id: jenisIbadahId,
+              tanggal: record.tanggal,
+              status: statusDB,
+              keterangan: record.keterangan || record.keterangan_halangan || null,
+              saksi: record.saksi || null,
+              status_verifikasi: verifDB,
+              catatan_verifikasi: record.catatan_pengurus || record.catatan_verifikasi || null,
+              dibuat_pada: record.dibuat_pada || new Date().toISOString(),
+            },
+          }),
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.ok && json.id) {
+            const presensiList = this.getItem<PresensiIbadah[]>(STORAGE_KEY_PRESENSI, []);
+            const idx = presensiList.findIndex((p) => p.id === record.id);
+            if (idx !== -1) {
+              presensiList[idx].id = json.id;
+              this.setItem(STORAGE_KEY_PRESENSI, presensiList);
+            }
+            return true;
+          }
+        }
+      } catch (err) {
+        console.warn('Gagal pushCheckin via /api/sync, mencoba direct Supabase:', err);
+      }
+    }
+
     if (!this.supabase) return false;
     try {
-      const profile = this.getProfileById(record.profile_id || record.user_id);
-      if (!profile) return false;
-
       // Ambil profile UUID dari cache atau query
       let profileUuid: string | undefined;
       if (this.cloudProfilesCache) {
@@ -361,15 +463,6 @@ class DataService {
         console.warn('Profil UUID Supabase tidak ditemukan untuk NIS:', profile.nis);
         return false;
       }
-
-      const jenisIbadahId = IBADAH_UUID_MAP[record.ibadah || 'sholat_dzuhur'] || IBADAH_UUID_MAP.sholat_dzuhur;
-      const statusDB = record.status === 'izin_halangan' ? 'izin' : 'hadir';
-      const verifDB =
-        record.status_verifikasi === 'terverifikasi'
-          ? 'valid'
-          : record.status_verifikasi === 'pelanggaran' || record.status_verifikasi === 'ditolak'
-          ? 'tidak_valid'
-          : 'menunggu';
 
       // Cek apakah data presensi tanggal & jenis ibadah ini sudah ada di Supabase
       const { data: existing } = await this.supabase
@@ -447,6 +540,29 @@ class DataService {
     status: VerifikasiStatus,
     catatan?: string
   ): Promise<boolean> {
+    // 1. Coba verifikasi via /api/sync terlebih dahulu
+    if (this.isBrowser) {
+      try {
+        const res = await fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'verify',
+            presensiId,
+            status,
+            catatan: catatan || (status === 'terverifikasi' ? 'Diverifikasi langsung oleh pengurus' : null),
+            diverifikasi_oleh: this.getCurrentUser()?.id,
+          }),
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.ok) return true;
+        }
+      } catch (err) {
+        console.warn('Gagal pushVerify via /api/sync, mencoba direct Supabase:', err);
+      }
+    }
+
     if (!this.supabase) return false;
     try {
       const statusDB =
@@ -724,13 +840,16 @@ class DataService {
     const withProfiles = list.map((item) => {
       const uId = item.profile_id || item.user_id;
       const vId = item.diverifikasi_oleh || item.verified_by;
+      const matchedProfile =
+        profiles.find((p) => p.id === uId) ||
+        profiles.find((p) => item.profile?.nis && p.nis === item.profile.nis);
       return {
         ...item,
-        profile_id: uId,
-        user_id: uId,
+        profile_id: matchedProfile?.id || uId,
+        user_id: matchedProfile?.id || uId,
         diverifikasi_oleh: vId,
         verified_by: vId,
-        profile: profiles.find((p) => p.id === uId),
+        profile: matchedProfile || item.profile,
         verifier_profile: vId ? profiles.find((p) => p.id === vId) : undefined,
       };
     });

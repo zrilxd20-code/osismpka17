@@ -38,6 +38,7 @@ import {
   Sparkles,
   RefreshCw,
   Calendar,
+  Users,
 } from 'lucide-react';
 
 interface PengurusViewProps {
@@ -47,7 +48,7 @@ interface PengurusViewProps {
 
 export default function PengurusView({ currentUser, onRefreshData }: PengurusViewProps) {
   const [activeTab, setActiveTab] = useState<
-    'monitoring' | 'manual' | 'random' | 'rekap' | 'settings' | 'audit'
+    'monitoring' | 'members' | 'manual' | 'random' | 'rekap' | 'settings' | 'audit'
   >('monitoring');
 
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -202,6 +203,26 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
     return profiles.filter((p) => p.is_active && p.role !== 'pembina');
   }, [profiles]);
 
+  // Daftar tanggal yang memiliki riwayat presensi
+  const availableDatesWithPresensi = useMemo(() => {
+    return Array.from(new Set(presensiList.map((p) => p.tanggal))).sort((a, b) => b.localeCompare(a));
+  }, [presensiList]);
+
+  // Daftar seluruh anggota untuk Tab 'members'
+  const searchedAllMembers = useMemo(() => {
+    return activeMembers.filter((m) => {
+      const matchOrg = filterOrg === 'semua' || m.organisasi === filterOrg;
+      const q = searchQuery.trim().toLowerCase();
+      const matchQuery =
+        !q ||
+        (m.full_name && m.full_name.toLowerCase().includes(q)) ||
+        (m.nama && m.nama.toLowerCase().includes(q)) ||
+        (m.nis && m.nis.includes(q)) ||
+        (m.kelas && m.kelas.toLowerCase().includes(q));
+      return matchOrg && matchQuery;
+    });
+  }, [activeMembers, filterOrg, searchQuery]);
+
   // Attendance for selected date
   const selectedDatePresensi = useMemo(() => {
     return presensiList.filter((p) => p.tanggal === selectedDate);
@@ -229,8 +250,9 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
       const matchOrg = filterOrg === 'semua' || item.profile?.organisasi === filterOrg;
       const matchSearch =
         !searchQuery.trim() ||
-        (item.profile?.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
-        (item.profile?.nis.includes(searchQuery) ?? false);
+        (item.profile?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
+        (item.profile?.nama?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
+        (item.profile?.nis?.includes(searchQuery) ?? false);
       return matchOrg && matchSearch;
     });
   }, [selectedDatePresensi, filterOrg, searchQuery]);
@@ -525,6 +547,18 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
         </button>
 
         <button
+          onClick={() => setActiveTab('members')}
+          className={`px-4 py-2.5 rounded-xl transition-all shrink-0 flex items-center gap-2 ${
+            activeTab === 'members'
+              ? 'bg-emerald-600 text-white shadow-sm'
+              : 'text-slate-600 hover:bg-white hover:text-slate-900'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>Daftar Anggota ({activeMembers.length})</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('manual')}
           className={`px-4 py-2.5 rounded-xl transition-all shrink-0 flex items-center gap-2 ${
             activeTab === 'manual'
@@ -644,6 +678,32 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
               </div>
             </div>
           </div>
+
+          {/* PEMBERITAHUAN TANGGAL DENGAN DATA PRESENSI */}
+          {availableDatesWithPresensi.length > 0 && selectedDatePresensi.length === 0 && (
+            <div className="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span className="text-emerald-950 font-medium">
+                  Belum ada presensi pada tanggal <strong>{selectedDate}</strong>.
+                  Data presensi tersimpan pada tanggal:
+                </span>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                {availableDatesWithPresensi.map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setSelectedDate(d)}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-colors shadow-xs cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>Lihat {d} ({presensiList.filter((p) => p.tanggal === d).length} presensi)</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* SECTION 1: DAFTAR ANGGOTA YANG BELUM CHECK-IN (FITUR UTAMA PROMPT) */}
           <div className="bg-white rounded-3xl p-5 border border-rose-200/80 shadow-xs">
@@ -850,6 +910,115 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
                 </table>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* TAB: DAFTAR LENGKAP ANGGOTA OSIS & MPK */}
+      {/* ============================================================== */}
+      {activeTab === 'members' && (
+        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-emerald-600" />
+                <h3 className="font-bold text-base text-slate-900">Daftar Lengkap Anggota OSIS & MPK</h3>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Total {searchedAllMembers.length} anggota aktif terdaftar dalam sistem presensi ibadah.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <select
+                value={filterOrg}
+                onChange={(e) => setFilterOrg(e.target.value)}
+                className="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold"
+              >
+                <option value="semua">Semua Organisasi</option>
+                <option value="OSIS">Hanya OSIS</option>
+                <option value="MPK">Hanya MPK</option>
+              </select>
+
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                <input
+                  type="text"
+                  placeholder="Cari nama atau NIS..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-xs w-44 sm:w-56"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-600 font-bold">
+                  <th className="py-2.5 px-3">No</th>
+                  <th className="py-2.5 px-3">Nama Anggota</th>
+                  <th className="py-2.5 px-3">NIS</th>
+                  <th className="py-2.5 px-3">Organisasi</th>
+                  <th className="py-2.5 px-3">Kelas</th>
+                  <th className="py-2.5 px-3">Jabatan</th>
+                  <th className="py-2.5 px-3">Agama</th>
+                  <th className="py-2.5 px-3">Peran Akun</th>
+                  <th className="py-2.5 px-3 text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {searchedAllMembers.map((m, idx) => (
+                  <tr key={m.id || m.nis} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-2.5 px-3 font-mono text-slate-400">{idx + 1}</td>
+                    <td className="py-2.5 px-3 font-bold text-slate-900">{m.full_name || m.nama}</td>
+                    <td className="py-2.5 px-3 font-mono text-slate-600">{m.nis}</td>
+                    <td className="py-2.5 px-3">
+                      <span
+                        className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${
+                          m.organisasi === 'MPK'
+                            ? 'bg-purple-100 text-purple-700'
+                            : 'bg-emerald-100 text-emerald-700'
+                        }`}
+                      >
+                        {m.organisasi}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3 font-medium text-slate-700">{m.kelas}</td>
+                    <td className="py-2.5 px-3 text-slate-600">{m.jabatan}</td>
+                    <td className="py-2.5 px-3 capitalize text-slate-700">{m.agama}</td>
+                    <td className="py-2.5 px-3">
+                      <span
+                        className={`px-2 py-0.5 rounded-md font-semibold text-[10px] ${
+                          m.role === 'pengurus'
+                            ? 'bg-amber-100 text-amber-800'
+                            : m.role === 'pembina'
+                            ? 'bg-sky-100 text-sky-800'
+                            : 'bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        {m.role}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setManualUserId(m.id);
+                          setManualIbadah(m.agama === 'islam' ? 'sholat_dzuhur' : 'pendalaman_iman');
+                          setActiveTab('manual');
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold transition-colors cursor-pointer"
+                      >
+                        Input Presensi
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
