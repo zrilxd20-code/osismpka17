@@ -488,6 +488,9 @@ class DataService {
     status: VerifikasiStatus,
     catatan?: string
   ): Promise<boolean> {
+    const presensi = this.getPresensiList().find((p) => p.id === presensiId);
+    const profile = presensi?.profile || (presensi ? this.getProfileById(presensi.profile_id || presensi.user_id) : undefined);
+
     // 1. Coba verifikasi via /api/sync terlebih dahulu
     if (this.isBrowser) {
       try {
@@ -500,6 +503,10 @@ class DataService {
             status,
             catatan: catatan || (status === 'terverifikasi' ? 'Diverifikasi langsung oleh pengurus' : null),
             diverifikasi_oleh: this.getCurrentUser()?.id,
+            profile_id: presensi?.profile_id || presensi?.user_id,
+            nis: profile?.nis,
+            tanggal: presensi?.tanggal,
+            ibadah: presensi?.ibadah,
           }),
         });
         if (res.ok) {

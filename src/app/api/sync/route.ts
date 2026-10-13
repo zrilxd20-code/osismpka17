@@ -133,21 +133,83 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'verify') {
-      const { presensiId, status, catatan, diverifikasi_oleh } = body;
-      const { error: verifyErr } = await admin
-        .from('checkin')
-        .update({
-          status_verifikasi: status === 'terverifikasi' ? 'valid' : status === 'pelanggaran' ? 'tidak_valid' : 'menunggu',
-          catatan_verifikasi: catatan || null,
-          diverifikasi_oleh: diverifikasi_oleh || null,
-        })
-        .eq('id', presensiId);
+      const { presensiId, status, catatan, diverifikasi_oleh, profile_id, nis, tanggal, ibadah } = body;
 
-      if (verifyErr) {
-        return NextResponse.json({ ok: false, error: verifyErr.message }, { status: 500 });
+      const safeVerif =
+        status === 'terverifikasi' || status === 'valid'
+          ? 'valid'
+          : status === 'pelanggaran' || status === 'tidak_valid' || status === 'ditolak'
+          ? 'tidak_valid'
+          : 'menunggu';
+
+      // Pastikan diverifikasi_oleh adalah UUID 36-karakter valid agar tidak error 22P02
+      let verifierUuid: string | null = null;
+      if (
+        diverifikasi_oleh &&
+        typeof diverifikasi_oleh === 'string' &&
+        diverifikasi_oleh.length === 36 &&
+        !diverifikasi_oleh.startsWith('usr-')
+      ) {
+        verifierUuid = diverifikasi_oleh;
       }
 
-      return NextResponse.json({ ok: true });
+      let updated = false;
+
+      // 1. Coba update via presensiId jika formatnya UUID
+      if (presensiId && typeof presensiId === 'string' && presensiId.length === 36 && !presensiId.startsWith('pre-')) {
+        const { error: verifyErr, data } = await admin
+          .from('checkin')
+          .update({
+            status_verifikasi: safeVerif,
+            catatan_verifikasi: catatan || (safeVerif === 'valid' ? 'Diverifikasi langsung oleh pengurus' : null),
+            diverifikasi_oleh: verifierUuid,
+          })
+          .eq('id', presensiId)
+          .select('id');
+
+        if (!verifyErr && data && data.length > 0) {
+          updated = true;
+        }
+      }
+
+      // 2. Fallback: jika presensiId bukan UUID (misal ID lokal 'pre-xx'), cari via profile & tanggal
+      if (!updated) {
+        let pUuid =
+          profile_id && typeof profile_id === 'string' && profile_id.length === 36 && !profile_id.startsWith('usr-')
+            ? profile_id
+            : null;
+
+        if (!pUuid && nis) {
+          const { data: pFound } = await admin.from('profiles').select('id').eq('nis', nis).maybeSingle();
+          if (pFound) pUuid = pFound.id;
+        }
+
+        if (pUuid && tanggal) {
+          const jenisIbadahId =
+            ibadah === 'pendalaman_iman'
+              ? 'f952c418-479e-4c8e-a9ba-762ee71871f3'
+              : '0728ae44-4ba3-458f-8427-462d24bc8724';
+
+          const { error: matchErr } = await admin
+            .from('checkin')
+            .update({
+              status_verifikasi: safeVerif,
+              catatan_verifikasi: catatan || (safeVerif === 'valid' ? 'Diverifikasi langsung oleh pengurus' : null),
+              diverifikasi_oleh: verifierUuid,
+            })
+            .eq('profile_id', pUuid)
+            .eq('tanggal', tanggal)
+            .eq('jenis_ibadah_id', jenisIbadahId);
+
+          if (!matchErr) {
+            updated = true;
+          } else {
+            console.error('[API Sync Fallback Verify Error]:', matchErr);
+          }
+        }
+      }
+
+      return NextResponse.json({ ok: true, updated });
     }
 
     if (action === 'add_profile') {
