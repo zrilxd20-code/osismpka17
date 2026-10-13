@@ -16,7 +16,7 @@ import {
   CheckCircle2,
   Clock,
   AlertTriangle,
-  UserCheck,
+
   Send,
   Calendar,
   Info,
@@ -25,7 +25,7 @@ import {
   XCircle,
   HelpCircle,
   Sparkles,
-  MapPin,
+
 } from 'lucide-react';
 
 interface AnggotaViewProps {

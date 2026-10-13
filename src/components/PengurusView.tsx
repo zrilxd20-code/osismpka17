@@ -37,7 +37,6 @@ import {
   X,
   Sparkles,
   RefreshCw,
-  Database,
   Calendar,
 } from 'lucide-react';
 
@@ -195,6 +194,7 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
       unsubscribe();
       clearInterval(interval);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Filtered members list
