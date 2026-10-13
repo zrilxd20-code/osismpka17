@@ -596,7 +596,7 @@ class DataService {
   }
 
   public getProfileById(id: string): Profile | undefined {
-    return this.getProfiles().find((p) => p.id === id);
+    return this.getProfiles().find((p) => p.id === id || p.nis === id);
   }
 
   public getProfileByNis(nis: string): Profile | undefined {

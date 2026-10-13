@@ -64,6 +64,21 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: false, error: 'Profil tidak valid untuk checkin.' }, { status: 400 });
       }
 
+      // Pastikan status & status_verifikasi sesuai CHECK constraint Postgres
+      const safeStatus =
+        status === 'izin_halangan' || status === 'izin'
+          ? 'izin'
+          : status === 'tidak_hadir'
+          ? 'tidak_hadir'
+          : 'hadir';
+
+      const safeVerif =
+        status_verifikasi === 'terverifikasi' || status_verifikasi === 'valid'
+          ? 'valid'
+          : status_verifikasi === 'pelanggaran' || status_verifikasi === 'tidak_valid' || status_verifikasi === 'ditolak'
+          ? 'tidak_valid'
+          : 'menunggu';
+
       // Cek apakah sudah ada checkin untuk user, ibadah, dan tanggal yang sama
       const { data: existing } = await admin
         .from('checkin')
@@ -80,10 +95,10 @@ export async function POST(req: NextRequest) {
         const { error: updateErr } = await admin
           .from('checkin')
           .update({
-            status,
+            status: safeStatus,
             keterangan: keterangan || null,
             saksi: saksi || null,
-            status_verifikasi: status_verifikasi || 'menunggu',
+            status_verifikasi: safeVerif,
             catatan_verifikasi: catatan_verifikasi || null,
           })
           .eq('id', existing.id);
@@ -98,10 +113,10 @@ export async function POST(req: NextRequest) {
             profile_id,
             jenis_ibadah_id,
             tanggal,
-            status,
+            status: safeStatus,
             keterangan: keterangan || null,
             saksi: saksi || null,
-            status_verifikasi: status_verifikasi || 'menunggu',
+            status_verifikasi: safeVerif,
             catatan_verifikasi: catatan_verifikasi || null,
             dibuat_pada: dibuat_pada || new Date().toISOString(),
           })
