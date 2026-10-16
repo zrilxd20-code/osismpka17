@@ -18,6 +18,7 @@ import {
   formatJamWIB,
   getDetailHariWIB,
   isHariJumat,
+  isWeekend,
 } from '@/lib/time-utils';
 import { exportToExcel, exportToPDF, ExportPeriodType } from '@/lib/export-utils';
 import GrafikKehadiran from '@/components/GrafikKehadiran';
@@ -279,7 +280,7 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
   const rekapData = useMemo(() => {
     const today = getTodayWIB();
     if (rekapPeriod === 'hari_ini') {
-      const list = presensiList.filter((p) => p.tanggal === today);
+      const list = presensiList.filter((p) => p.tanggal === today && !isWeekend(p.tanggal));
       return {
         list,
         label: `Per Hari (${formatTanggalIndonesia(today)})`,
@@ -291,25 +292,28 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
       const sevenDaysAgo = new Date(todayDate);
       sevenDaysAgo.setDate(todayDate.getDate() - 7);
       const minDateStr = sevenDaysAgo.toISOString().slice(0, 10);
-      const list = presensiList.filter((p) => p.tanggal >= minDateStr && p.tanggal <= today);
+      const list = presensiList.filter(
+        (p) => p.tanggal >= minDateStr && p.tanggal <= today && !isWeekend(p.tanggal)
+      );
       return {
         list,
-        label: `Per Minggu (7 Hari: ${minDateStr} s/d ${today})`,
+        label: `Per Minggu (Hari Sekolah: ${minDateStr} s/d ${today})`,
         fileSuffix: `Mingguan_${minDateStr}_sd_${today}`,
       };
     }
     if (rekapPeriod === 'bulan_ini') {
       const yearMonth = today.slice(0, 7);
-      const list = presensiList.filter((p) => p.tanggal.startsWith(yearMonth));
+      const list = presensiList.filter((p) => p.tanggal.startsWith(yearMonth) && !isWeekend(p.tanggal));
       return {
         list,
-        label: `Per Bulan (${yearMonth})`,
+        label: `Per Bulan (${yearMonth}) - Hari Sekolah`,
         fileSuffix: `Bulanan_${yearMonth}`,
       };
     }
+    const list = presensiList.filter((p) => !isWeekend(p.tanggal));
     return {
-      list: presensiList,
-      label: 'Semua Riwayat (Kumulatif)',
+      list,
+      label: 'Semua Riwayat (Hari Sekolah)',
       fileSuffix: 'Semua_Riwayat',
     };
   }, [presensiList, rekapPeriod]);

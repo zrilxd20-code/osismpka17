@@ -5,7 +5,7 @@ import { Profile, PresensiIbadah, AuditLog } from '@/types/database';
 import { dataService } from '@/lib/data-service';
 import { exportToExcel, exportToPDF, ExportPeriodType } from '@/lib/export-utils';
 import GrafikKehadiran from '@/components/GrafikKehadiran';
-import { formatTanggalIndonesia, formatJamWIB } from '@/lib/time-utils';
+import { formatTanggalIndonesia, formatJamWIB, isWeekend } from '@/lib/time-utils';
 import {
   ShieldCheck,
   FileSpreadsheet,
@@ -38,20 +38,25 @@ export default function PembinaView({ currentUser }: PembinaViewProps) {
     return profiles.filter((p) => p.is_active && p.role !== 'pembina');
   }, [profiles]);
 
+  // HANYA HARI AKTIF SEKOLAH (SENIN - JUMAT), KECUALIKAN SABTU & MINGGU
+  const schoolPresensiList = useMemo(() => {
+    return presensiList.filter((p) => !isWeekend(p.tanggal));
+  }, [presensiList]);
+
   const filteredPresensi = useMemo(() => {
-    if (filterOrg === 'semua') return presensiList;
-    return presensiList.filter((p) => p.profile?.organisasi === filterOrg);
-  }, [presensiList, filterOrg]);
+    if (filterOrg === 'semua') return schoolPresensiList;
+    return schoolPresensiList.filter((p) => p.profile?.organisasi === filterOrg);
+  }, [schoolPresensiList, filterOrg]);
 
   const stats = useMemo(() => {
     const totalMembers = activeMembers.length;
-    const hadir = presensiList.filter((p) => p.status === 'hadir').length;
-    const izin = presensiList.filter((p) => p.status === 'izin_halangan').length;
-    const pelanggaran = presensiList.filter((p) => p.status_verifikasi === 'pelanggaran').length;
-    const terverifikasi = presensiList.filter((p) => p.status_verifikasi === 'terverifikasi').length;
+    const hadir = schoolPresensiList.filter((p) => p.status === 'hadir').length;
+    const izin = schoolPresensiList.filter((p) => p.status === 'izin_halangan').length;
+    const pelanggaran = schoolPresensiList.filter((p) => p.status_verifikasi === 'pelanggaran').length;
+    const terverifikasi = schoolPresensiList.filter((p) => p.status_verifikasi === 'terverifikasi').length;
 
     return { totalMembers, hadir, izin, pelanggaran, terverifikasi };
-  }, [activeMembers, presensiList]);
+  }, [activeMembers, schoolPresensiList]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -127,7 +132,7 @@ export default function PembinaView({ currentUser }: PembinaViewProps) {
               onClick={async () => {
                 try {
                   setIsExporting(true);
-                  await exportToExcel(presensiList, {
+                  await exportToExcel(schoolPresensiList, {
                     title: `Laporan_Pembina_OSIS_MPK_${exportGrouping.toUpperCase()}`,
                     periodType: exportGrouping,
                     includeDailySheets,
@@ -153,7 +158,7 @@ export default function PembinaView({ currentUser }: PembinaViewProps) {
                 try {
                   setIsExporting(true);
                   exportToPDF(
-                    presensiList,
+                    schoolPresensiList,
                     {
                       periodeLabel: `Rekapitulasi ${exportGrouping === 'mingguan' ? 'Mingguan' : exportGrouping === 'bulanan' ? 'Bulanan' : 'Harian'}`,
                       periodType: exportGrouping,

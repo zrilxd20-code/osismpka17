@@ -6,7 +6,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { PresensiIbadah } from '@/types/database';
-import { formatTanggalIndonesia, formatJamWIB } from './time-utils';
+import { formatTanggalIndonesia, formatJamWIB, isWeekend } from './time-utils';
 import { DEFAULT_PROFILES } from './data-service';
 
 export type ExportPeriodType = 'mingguan' | 'bulanan' | 'harian';
@@ -133,11 +133,15 @@ export function aggregatePresensiData(
       ? membersList
       : (DEFAULT_PROFILES.filter((p) => p.is_active && p.role !== 'pembina') as ProfileLike[]);
 
-  // Tanggal-tanggal unik pada data
-  const uniqueDates = Array.from(new Set(data.map((d) => d.tanggal).filter(Boolean))) as string[];
+  // Tanggal-tanggal unik pada data (HANYA HARI AKTIF SEKOLAH SENIN - JUMAT, KECUALIKAN SABTU & MINGGU)
+  const rawDates = Array.from(new Set(data.map((d) => d.tanggal).filter(Boolean))) as string[];
+  const uniqueDates = rawDates.filter((tgl) => !isWeekend(tgl));
   uniqueDates.sort();
   if (uniqueDates.length === 0) {
-    uniqueDates.push(new Date().toISOString().slice(0, 10));
+    const today = new Date().toISOString().slice(0, 10);
+    if (!isWeekend(today)) {
+      uniqueDates.push(today);
+    }
   }
 
   // Peta checkin per tanggal: tanggal -> (userId/nis -> checkin)

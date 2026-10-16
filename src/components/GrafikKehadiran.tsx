@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { PresensiIbadah, Profile } from '@/types/database';
 import { DEFAULT_PROFILES } from '@/lib/data-service';
-import { formatTanggalIndonesia } from '@/lib/time-utils';
+import { formatTanggalIndonesia, isWeekend } from '@/lib/time-utils';
 import { BarChart3, PieChart, TrendingUp, Calendar, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
 
 interface GrafikKehadiranProps {
@@ -30,9 +30,11 @@ export default function GrafikKehadiran({
   const targetMembersPerDay = totalMembersCount || activeMembers.length || 39;
 
   // 1. Agregasi data per tanggal dengan memperhitungkan siswa yang BELUM CHECK-IN sebagai ALPHA
+  // KHUSUS HARI AKTIF SEKOLAH (SENIN - JUMAT). SABTU & MINGGU DIKECUALIKAN!
   const dailyStats = useMemo(() => {
-    // Ambil tanggal unik dari data yang ada
-    const dates = Array.from(new Set(data.map((d) => d.tanggal).filter(Boolean))) as string[];
+    // Ambil tanggal unik dari data yang ada dan kecualikan akhir pekan (Sabtu & Minggu)
+    const rawDates = Array.from(new Set(data.map((d) => d.tanggal).filter(Boolean))) as string[];
+    const dates = rawDates.filter((tgl) => !isWeekend(tgl));
     dates.sort();
     if (dates.length === 0) return [];
 
@@ -122,11 +124,12 @@ export default function GrafikKehadiran({
     };
   }, [dailyStats]);
 
-  if (data.length === 0) {
+  if (data.length === 0 || dailyStats.length === 0) {
     return (
       <div className="bg-white rounded-3xl p-8 border border-slate-200 text-center text-slate-400">
         <BarChart3 className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-        <p className="text-sm font-semibold">Belum ada data presensi untuk menampilkan grafik pada periode ini.</p>
+        <p className="text-sm font-semibold">Belum ada data presensi pada hari aktif sekolah (Senin - Jumat).</p>
+        <p className="text-xs text-slate-400 mt-1">Hari Sabtu & Minggu adalah libur akhir pekan dan tidak masuk ke dalam perhitungan presensi.</p>
       </div>
     );
   }
