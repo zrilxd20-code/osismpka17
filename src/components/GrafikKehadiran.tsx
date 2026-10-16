@@ -236,21 +236,49 @@ export default function GrafikKehadiran({
           </div>
 
           {/* Area Render Batang Grafik */}
-          <div className="relative pt-4 pb-2">
-            {/* Grid Lines Horizontal */}
-            <div className="absolute inset-x-0 top-4 bottom-10 flex flex-col justify-between pointer-events-none opacity-20">
-              <div className="border-b border-slate-300 w-full" />
-              <div className="border-b border-slate-300 w-full" />
-              <div className="border-b border-slate-300 w-full" />
-              <div className="border-b border-slate-300 w-full" />
+          <div className="relative pt-6 pb-2 pl-9">
+            {/* Grid Lines Horizontal & Label Sumbu Y (Skala 0 s/d 39 Siswa) */}
+            <div className="absolute inset-y-0 left-0 right-0 top-6 bottom-10 flex flex-col justify-between pointer-events-none">
+              <div className="flex items-center gap-2 border-b border-slate-200 w-full">
+                <span className="text-[10px] font-bold text-slate-400 w-7 text-right shrink-0">
+                  {targetMembersPerDay}
+                </span>
+                <div className="w-full" />
+              </div>
+              <div className="flex items-center gap-2 border-b border-slate-200/60 w-full">
+                <span className="text-[10px] font-semibold text-slate-400 w-7 text-right shrink-0">
+                  {Math.round((targetMembersPerDay * 3) / 4)}
+                </span>
+                <div className="w-full" />
+              </div>
+              <div className="flex items-center gap-2 border-b border-slate-200/60 w-full">
+                <span className="text-[10px] font-semibold text-slate-400 w-7 text-right shrink-0">
+                  {Math.round(targetMembersPerDay / 2)}
+                </span>
+                <div className="w-full" />
+              </div>
+              <div className="flex items-center gap-2 border-b border-slate-200/60 w-full">
+                <span className="text-[10px] font-semibold text-slate-400 w-7 text-right shrink-0">
+                  {Math.round(targetMembersPerDay / 4)}
+                </span>
+                <div className="w-full" />
+              </div>
+              <div className="flex items-center gap-2 border-b border-slate-300 w-full">
+                <span className="text-[10px] font-bold text-slate-400 w-7 text-right shrink-0">
+                  0
+                </span>
+                <div className="w-full" />
+              </div>
             </div>
 
             {/* Batang-batang tanggal */}
-            <div className="flex items-end justify-between gap-2 sm:gap-4 h-56 px-2 overflow-x-auto">
+            <div className="relative z-10 flex items-end justify-between gap-2 sm:gap-4 h-60 px-2 overflow-x-auto">
               {dailyStats.map((d) => {
-                const heightPercentHadir = Math.round((d.hadir / targetMembersPerDay) * 100);
-                const heightPercentIzin = Math.round((d.izin / targetMembersPerDay) * 100);
-                const heightPercentTidak = Math.round((d.tidakHadir / targetMembersPerDay) * 100);
+                const maxBarHeight = 175; // Total tinggi bar dalam pixel mewakili 39 anak
+                const hadirPx = Math.round((d.hadir / targetMembersPerDay) * maxBarHeight);
+                const izinPx = Math.round((d.izin / targetMembersPerDay) * maxBarHeight);
+                const tidakHadirPx = Math.max(0, maxBarHeight - hadirPx - izinPx);
+
                 const isHovered = hoveredDate === d.tanggal;
 
                 const dayDate = new Date(d.tanggal);
@@ -264,45 +292,72 @@ export default function GrafikKehadiran({
                     key={d.tanggal}
                     onMouseEnter={() => setHoveredDate(d.tanggal)}
                     onMouseLeave={() => setHoveredDate(null)}
-                    className="flex-1 min-w-[38px] max-w-[64px] flex flex-col items-center cursor-pointer group"
+                    className="flex-1 min-w-[42px] max-w-[68px] flex flex-col items-center cursor-pointer group"
                   >
-                    {/* Nilai kehadiran saat hover */}
+                    {/* Ringkasan Angka di Atas Batang */}
                     <div
-                      className={`text-[10px] font-bold text-slate-600 mb-1 transition-all ${
-                        isHovered ? 'opacity-100 scale-110 text-emerald-600' : 'opacity-80'
+                      className={`text-[10px] font-bold mb-1 transition-all flex flex-col items-center leading-tight ${
+                        isHovered ? 'scale-110 text-slate-900 font-black' : 'text-slate-600'
                       }`}
                     >
-                      {d.hadir}/{targetMembersPerDay}
+                      <span className="text-emerald-700 font-black">{d.hadir}</span>
+                      {d.tidakHadir > 0 && (
+                        <span className="text-[9px] text-rose-600 font-extrabold bg-rose-50 px-1 rounded-sm">
+                          {d.tidakHadir}A
+                        </span>
+                      )}
                     </div>
 
-                    {/* Kontainer Bar Stacked (Tinggi penuh mencerminkan target 39 anggota) */}
+                    {/* Kontainer Bar Stacked (Tinggi selalu mewakili kuota 39 anggota) */}
                     <div
-                      className={`w-full max-w-[28px] rounded-t-lg overflow-hidden flex flex-col-reverse transition-all duration-300 ${
-                        isHovered ? 'ring-2 ring-emerald-500 ring-offset-2' : 'group-hover:opacity-90'
+                      className={`w-full max-w-[32px] rounded-t-lg overflow-hidden flex flex-col justify-end shadow-xs transition-all duration-300 border border-slate-200/80 ${
+                        isHovered ? 'ring-2 ring-purple-600 ring-offset-2' : 'group-hover:shadow-md'
                       }`}
-                      style={{ height: '170px' }}
+                      style={{ height: `${maxBarHeight}px` }}
                     >
-                      {/* Hadir (Hijau) */}
-                      <div
-                        className="bg-emerald-500 hover:bg-emerald-400 transition-all"
-                        style={{ height: `${heightPercentHadir}%` }}
-                        title={`Hadir: ${d.hadir} siswa`}
-                      />
-                      {/* Izin (Kuning) */}
-                      {d.izin > 0 && (
+                      {/* 1. BAGIAN ATAS: Alpha / Belum Check-in (MERAH MENCOLOK) */}
+                      {tidakHadirPx > 0 && (
                         <div
-                          className="bg-amber-400 hover:bg-amber-300 transition-all"
-                          style={{ height: `${heightPercentIzin}%` }}
-                          title={`Izin: ${d.izin} siswa`}
-                        />
+                          className="w-full bg-rose-500 hover:bg-rose-600 transition-colors flex items-center justify-center relative overflow-hidden"
+                          style={{ height: `${tidakHadirPx}px` }}
+                          title={`Alpha / Belum Check-in: ${d.tidakHadir} siswa dari ${targetMembersPerDay}`}
+                        >
+                          {tidakHadirPx >= 18 && (
+                            <span className="text-[10px] font-black text-white drop-shadow-xs select-none">
+                              {d.tidakHadir}
+                            </span>
+                          )}
+                        </div>
                       )}
-                      {/* Tidak Hadir / Belum Check-in (Merah) */}
-                      {d.tidakHadir > 0 && (
+
+                      {/* 2. BAGIAN TENGAH: Izin / Halangan (KUNING) */}
+                      {izinPx > 0 && (
                         <div
-                          className="bg-rose-500 hover:bg-rose-400 transition-all"
-                          style={{ height: `${heightPercentTidak}%` }}
-                          title={`Alpha / Belum Check-in: ${d.tidakHadir} siswa`}
-                        />
+                          className="w-full bg-amber-400 hover:bg-amber-500 transition-colors flex items-center justify-center relative overflow-hidden"
+                          style={{ height: `${izinPx}px` }}
+                          title={`Izin / Halangan: ${d.izin} siswa`}
+                        >
+                          {izinPx >= 18 && (
+                            <span className="text-[10px] font-black text-slate-900 drop-shadow-xs select-none">
+                              {d.izin}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* 3. BAGIAN BAWAH: Hadir (HIJAU) */}
+                      {hadirPx > 0 && (
+                        <div
+                          className="w-full bg-emerald-500 hover:bg-emerald-600 transition-colors flex items-center justify-center relative overflow-hidden"
+                          style={{ height: `${hadirPx}px` }}
+                          title={`Hadir: ${d.hadir} siswa`}
+                        >
+                          {hadirPx >= 18 && (
+                            <span className="text-[10px] font-black text-white drop-shadow-xs select-none">
+                              {d.hadir}
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
 
