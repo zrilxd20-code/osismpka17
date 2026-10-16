@@ -7,6 +7,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { PresensiIbadah } from '@/types/database';
 import { formatTanggalIndonesia, formatJamWIB } from './time-utils';
+import { DEFAULT_PROFILES } from './data-service';
 
 export type ExportPeriodType = 'mingguan' | 'bulanan' | 'harian';
 
@@ -17,6 +18,7 @@ export interface ExportOptions {
   periodeLabel?: string;
   kordinatorName?: string;
   pembinaName?: string;
+  members?: ProfileLike[];
 }
 
 interface ProfileLike {
@@ -98,10 +100,12 @@ export interface SummaryBucket {
 
 /**
  * Mengelompokkan data berdasarkan periode yang dipilih (Harian, Mingguan, atau Bulanan)
+ * Memperhitungkan kapasitas penuh 39 anggota OSIS & MPK (siswa belum check-in = ALPHA)
  */
 export function aggregatePresensiData(
   data: PresensiIbadah[],
-  periodType: ExportPeriodType
+  periodType: ExportPeriodType,
+  membersList?: ProfileLike[]
 ): {
   buckets: SummaryBucket[];
   totalHadir: number;
@@ -123,10 +127,70 @@ export function aggregatePresensiData(
     persen: number;
   }>;
 } {
-  const bucketMap = new Map<string, SummaryBucket>();
+  // Ambil daftar lengkap seluruh anggota aktif OSIS & MPK (Standar: 39 Siswa)
+  const allMembers: ProfileLike[] =
+    membersList && membersList.length > 0
+      ? membersList
+      : (DEFAULT_PROFILES.filter((p) => p.is_active && p.role !== 'pembina') as ProfileLike[]);
+
+  // Tanggal-tanggal unik pada data
+  const uniqueDates = Array.from(new Set(data.map((d) => d.tanggal).filter(Boolean))) as string[];
+  uniqueDates.sort();
+  if (uniqueDates.length === 0) {
+    uniqueDates.push(new Date().toISOString().slice(0, 10));
+  }
+
+  // Peta checkin per tanggal: tanggal -> (userId/nis -> checkin)
+  const checkinByDate = new Map<string, Map<string, PresensiIbadah>>();
+  uniqueDates.forEach((tgl) => checkinByDate.set(tgl, new Map()));
 
   data.forEach((item) => {
-    const tgl = item.tanggal || 'Tanpa-Tanggal';
+    const tgl = item.tanggal;
+    if (!tgl || !checkinByDate.has(tgl)) return;
+    const prof = (item.profile || {}) as ProfileLike;
+    const dateMap = checkinByDate.get(tgl)!;
+    if (item.user_id) dateMap.set(item.user_id, item);
+    if (prof.id) dateMap.set(prof.id, item);
+    if (prof.nis) dateMap.set(prof.nis, item);
+  });
+
+  // Peta statistik tiap anggota untuk matriks siswa (Mencakup 39 Siswa Lengkap)
+  const memberStatsMap = new Map<
+    string,
+    {
+      nis: string;
+      nama: string;
+      kelas: string;
+      jabatan: string;
+      organisasi: string;
+      agama: string;
+      hadir: number;
+      izin: number;
+      tidakHadir: number;
+    }
+  >();
+
+  allMembers.forEach((m) => {
+    const mKey = m.nis || m.id || m.full_name || 'unknown';
+    memberStatsMap.set(mKey, {
+      nis: m.nis || '-',
+      nama: m.full_name || m.nama || 'Anggota',
+      kelas: m.kelas || '-',
+      jabatan: m.jabatan || '-',
+      organisasi: m.organisasi || '-',
+      agama: (m.agama || '-').toUpperCase(),
+      hadir: 0,
+      izin: 0,
+      tidakHadir: 0,
+    });
+  });
+
+  const bucketMap = new Map<string, SummaryBucket>();
+  let totalHadirAll = 0;
+  let totalIzinAll = 0;
+  let totalTidakHadirAll = 0;
+
+  uniqueDates.forEach((tgl) => {
     let key = tgl;
     let label = tgl;
     let shortLabel = tgl;
@@ -161,11 +225,45 @@ export function aggregatePresensiData(
     }
 
     const b = bucketMap.get(key)!;
-    b.total++;
-    b.items.push(item);
-    if (item.status === 'hadir') b.hadir++;
-    else if (item.status === 'izin' || item.status === 'izin_halangan') b.izin++;
-    else b.tidakHadir++;
+    const dayMap = checkinByDate.get(tgl) || new Map();
+
+    // Evaluasi seluruh 39 anak pada tanggal ini
+    allMembers.forEach((m) => {
+      const mKey = m.nis || m.id || m.full_name || '';
+      const mStat = memberStatsMap.get(mKey);
+      const chk =
+        dayMap.get(m.nis || '') ||
+        dayMap.get(m.id || '') ||
+        (mKey ? dayMap.get(mKey) : undefined);
+
+      b.total++; // Slot kehadiran bertambah 1 untuk siswa ini
+
+      if (chk && chk.status === 'hadir') {
+        b.hadir++;
+        totalHadirAll++;
+        if (mStat) mStat.hadir++;
+        b.items.push(chk);
+      } else if (chk && (chk.status === 'izin' || chk.status === 'izin_halangan')) {
+        b.izin++;
+        totalIzinAll++;
+        if (mStat) mStat.izin++;
+        b.items.push(chk);
+      } else {
+        // SISWA YANG TIDAK CHECK-IN OTOMATIS DIHITUNG SEBAGAI ALPHA (TIDAK HADIR)
+        b.tidakHadir++;
+        totalTidakHadirAll++;
+        if (mStat) mStat.tidakHadir++;
+        b.items.push({
+          id: `uncheckin-${tgl}-${m.nis || m.id}`,
+          user_id: m.id || '',
+          tanggal: tgl,
+          status: 'tidak_hadir',
+          status_verifikasi: 'tidak_valid',
+          keterangan: 'Belum / Tidak Check-in (Alpha)',
+          profile: m,
+        } as PresensiIbadah);
+      }
+    });
   });
 
   const buckets = Array.from(bucketMap.values()).sort((a, b) => a.key.localeCompare(b.key));
@@ -173,57 +271,11 @@ export function aggregatePresensiData(
     b.persen = b.total > 0 ? Math.round(((b.hadir + b.izin) / b.total) * 100) : 0;
   });
 
-  // Hitung total keseluruhan
-  let totalHadir = 0;
-  let totalIzin = 0;
-  let totalTidakHadir = 0;
-  data.forEach((i) => {
-    if (i.status === 'hadir') totalHadir++;
-    else if (i.status === 'izin' || i.status === 'izin_halangan') totalIzin++;
-    else totalTidakHadir++;
-  });
-  const totalCatatan = data.length;
-  const persenKehadiranTotal = totalCatatan > 0 ? Math.round(((totalHadir + totalIzin) / totalCatatan) * 100) : 0;
+  const totalCatatan = totalHadirAll + totalIzinAll + totalTidakHadirAll;
+  const persenKehadiranTotal =
+    totalCatatan > 0 ? Math.round(((totalHadirAll + totalIzinAll) / totalCatatan) * 100) : 0;
 
-  // Matriks Presensi Anggota (Unique Siswa)
-  const memberMap = new Map<
-    string,
-    {
-      nis: string;
-      nama: string;
-      kelas: string;
-      jabatan: string;
-      organisasi: string;
-      agama: string;
-      hadir: number;
-      izin: number;
-      tidakHadir: number;
-    }
-  >();
-
-  data.forEach((item) => {
-    const prof = (item.profile || {}) as ProfileLike;
-    const memKey = item.user_id || prof.id || prof.nis || prof.full_name || 'unknown';
-    if (!memberMap.has(memKey)) {
-      memberMap.set(memKey, {
-        nis: prof.nis || '-',
-        nama: prof.full_name || prof.nama || 'Anggota',
-        kelas: prof.kelas || '-',
-        jabatan: prof.jabatan || '-',
-        organisasi: prof.organisasi || '-',
-        agama: (prof.agama || '-').toUpperCase(),
-        hadir: 0,
-        izin: 0,
-        tidakHadir: 0,
-      });
-    }
-    const mem = memberMap.get(memKey)!;
-    if (item.status === 'hadir') mem.hadir++;
-    else if (item.status === 'izin' || item.status === 'izin_halangan') mem.izin++;
-    else mem.tidakHadir++;
-  });
-
-  const memberMatrix = Array.from(memberMap.values())
+  const memberMatrix = Array.from(memberStatsMap.values())
     .map((m) => {
       const tot = m.hadir + m.izin + m.tidakHadir;
       const pct = tot > 0 ? Math.round(((m.hadir + m.izin) / tot) * 100) : 0;
@@ -237,9 +289,9 @@ export function aggregatePresensiData(
 
   return {
     buckets,
-    totalHadir,
-    totalIzin,
-    totalTidakHadir,
+    totalHadir: totalHadirAll,
+    totalIzin: totalIzinAll,
+    totalTidakHadir: totalTidakHadirAll,
     totalCatatan,
     persenKehadiranTotal,
     memberMatrix,
@@ -431,7 +483,7 @@ export async function exportToExcel(
     totalCatatan,
     persenKehadiranTotal,
     memberMatrix,
-  } = aggregatePresensiData(data, periodType);
+  } = aggregatePresensiData(data, periodType, options.members);
 
   const periodTitle =
     periodType === 'mingguan'
@@ -770,7 +822,7 @@ export function exportToPDF(
     totalCatatan,
     persenKehadiranTotal,
     memberMatrix,
-  } = aggregatePresensiData(data, periodType);
+  } = aggregatePresensiData(data, periodType, options.members);
 
   const periodTitle =
     periodType === 'mingguan'

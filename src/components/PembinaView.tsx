@@ -132,6 +132,7 @@ export default function PembinaView({ currentUser }: PembinaViewProps) {
                     periodType: exportGrouping,
                     includeDailySheets,
                     periodeLabel: `Rekapitulasi ${exportGrouping === 'mingguan' ? 'Mingguan' : exportGrouping === 'bulanan' ? 'Bulanan' : 'Harian'}`,
+                    members: activeMembers,
                   });
                 } catch (e) {
                   console.error(e);
@@ -159,6 +160,7 @@ export default function PembinaView({ currentUser }: PembinaViewProps) {
                       includeDailySheets,
                       kordinatorName: 'Fadhil Pratama',
                       pembinaName: currentUser.full_name,
+                      members: activeMembers,
                     }
                   );
                 } catch (e) {
@@ -215,7 +217,12 @@ export default function PembinaView({ currentUser }: PembinaViewProps) {
       </div>
 
       {/* GRAFIK KEHADIRAN INTERAKTIF DI WEB */}
-      <GrafikKehadiran data={filteredPresensi} periodLabel="Grafik Kehadiran Pembina" />
+      <GrafikKehadiran
+        data={filteredPresensi}
+        periodLabel="Grafik Kehadiran Pembina"
+        members={activeMembers}
+        totalMembersCount={activeMembers.length}
+      />
 
       {/* TABEL REKAPITULASI DETAIL READ-ONLY */}
       <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">

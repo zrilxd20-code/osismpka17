@@ -1379,8 +1379,13 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
             </div>
           </div>
 
-          {/* GRAFIK KEHADIRAN INTERAKTIF DI WEB */}
-          <GrafikKehadiran data={rekapData.list} periodLabel={rekapData.label} />
+          {/* GRAFIK KEHADIRAN INTERAKTIF DI WEB (BASIS 39 ANGGOTA) */}
+          <GrafikKehadiran
+            data={rekapData.list}
+            periodLabel={rekapData.label}
+            totalMembersCount={activeMembers.length}
+            members={activeMembers}
+          />
 
           {/* KARTU UNDUH BERKAS RESMI DENGAN OPSI REKAP MINGGUAN / BULANAN / HARIAN */}
           <div className="bg-slate-900 text-white rounded-3xl p-6 shadow-sm flex flex-col gap-5">
@@ -1483,6 +1488,7 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
                       periodType: exportGrouping,
                       includeDailySheets,
                       periodeLabel: rekapData.label,
+                      members: activeMembers,
                     });
                     showToast('Berhasil mengunduh berkas Excel (.xlsx)!');
                   } catch (err) {
@@ -1513,6 +1519,7 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
                         includeDailySheets,
                         kordinatorName: currentUser.full_name,
                         pembinaName: 'Nurkholis Aiman / Maria Ulfa',
+                        members: activeMembers,
                       }
                     );
                     showToast('Berhasil mengunduh dokumen PDF resmi!');
