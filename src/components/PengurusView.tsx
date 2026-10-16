@@ -19,7 +19,8 @@ import {
   getDetailHariWIB,
   isHariJumat,
 } from '@/lib/time-utils';
-import { exportToExcel, exportToPDF } from '@/lib/export-utils';
+import { exportToExcel, exportToPDF, ExportPeriodType } from '@/lib/export-utils';
+import GrafikKehadiran from '@/components/GrafikKehadiran';
 import {
   CheckCircle,
   AlertTriangle,
@@ -39,6 +40,7 @@ import {
   RefreshCw,
   Calendar,
   Users,
+  BarChart3,
 } from 'lucide-react';
 
 interface PengurusViewProps {
@@ -105,6 +107,9 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
 
   // Rekap Export Filter State (Per Hari / Per Minggu / Per Bulan / Semua)
   const [rekapPeriod, setRekapPeriod] = useState<'hari_ini' | 'minggu_ini' | 'bulan_ini' | 'semua'>('bulan_ini');
+  const [exportGrouping, setExportGrouping] = useState<ExportPeriodType>('mingguan');
+  const [includeDailySheets, setIncludeDailySheets] = useState<boolean>(false);
+  const [isExporting, setIsExporting] = useState<boolean>(false);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -640,7 +645,7 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
               </span>
               {hariInfoSelected.isJumat && (
                 <span className="bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5">
-                  🕌 Hari Jumat (Sholat Jumat / Keputihan)
+                  🕌 Hari Jumat (Sholat Jumat / Keputrian)
                 </span>
               )}
               {hariInfoSelected.isWeekend && (
@@ -813,7 +818,7 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
                               ? hariInfoSelected.isJumat
                                 ? item.profile?.jenis_kelamin === 'laki-laki'
                                   ? 'Sholat Jumat'
-                                  : 'Dzuhur / Keputihan'
+                                  : 'Dzuhur / Keputrian'
                                 : 'Sholat Dzuhur'
                               : 'Pend. Iman'}
                           </span>
@@ -1087,7 +1092,7 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
                 >
                   <option value="sholat_dzuhur">
                     {isHariJumat(manualDate)
-                      ? 'Sholat Jumat (Putra) / Dzuhur & Keputihan (Putri)'
+                      ? 'Sholat Jumat (Putra) / Dzuhur & Keputrian (Putri)'
                       : 'Sholat Dzuhur'}
                   </option>
                   <option value="pendalaman_iman">
@@ -1374,47 +1379,154 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
             </div>
           </div>
 
-          {/* KARTU UNDUH BERKAS RESMI */}
-          <div className="bg-slate-900 text-white rounded-3xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  {rekapData.label}
-                </span>
-                <span className="text-xs text-slate-400 font-medium">
-                  • {rekapData.list.length} baris data ditemukan
-                </span>
+          {/* GRAFIK KEHADIRAN INTERAKTIF DI WEB */}
+          <GrafikKehadiran data={rekapData.list} periodLabel={rekapData.label} />
+
+          {/* KARTU UNDUH BERKAS RESMI DENGAN OPSI REKAP MINGGUAN / BULANAN / HARIAN */}
+          <div className="bg-slate-900 text-white rounded-3xl p-6 shadow-sm flex flex-col gap-5">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    {rekapData.label}
+                  </span>
+                  <span className="text-xs text-slate-400 font-medium">
+                    • {rekapData.list.length} baris data ditemukan
+                  </span>
+                </div>
+                <h4 className="text-lg font-black text-white mt-1.5">
+                  Unduh Berkas Laporan Presensi (Excel & PDF Resmi)
+                </h4>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  Dilengkapi diagram grafik batang visual kehadiran, ringkasan eksekutif, dan matriks kehadiran tiap anggota.
+                </p>
               </div>
-              <h4 className="text-lg font-black text-white mt-1.5">
-                Unduh Rekapitulasi Presensi
-              </h4>
-              <p className="text-xs text-slate-300 mt-0.5">
-                Format Excel (.xlsx) cocok untuk olah data lanjut, dan format PDF resmi sudah dilengkapi kop surat dan kolom tanda tangan.
-              </p>
+
+              {/* Status Grafik Badge */}
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-[11px] text-emerald-400 font-semibold shrink-0">
+                <BarChart3 className="w-4 h-4 text-emerald-400" />
+                <span>Grafik Otomatis Tertanam di Excel & PDF</span>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2.5 shrink-0">
+            {/* PENGATURAN MODE REKAPITULASI & RINCIAN */}
+            <div className="bg-slate-800/80 rounded-2xl p-4 border border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+                  Pilih Format Tabel Rekapitulasi:
+                </label>
+                <div className="inline-flex p-1 bg-slate-900 rounded-xl border border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => setExportGrouping('mingguan')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      exportGrouping === 'mingguan'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    🗓️ Per Minggu (Rekomendasi)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setExportGrouping('bulanan')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      exportGrouping === 'bulanan'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    📊 Per Bulan
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setExportGrouping('harian')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      exportGrouping === 'harian'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    📅 Per Hari
+                  </button>
+                </div>
+              </div>
+
+              {/* Toggle Sertakan Detail Harian */}
+              <div className="flex items-center gap-2.5">
+                <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={includeDailySheets}
+                    onChange={(e) => setIncludeDailySheets(e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-600 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                  />
+                  <span>Sertakan rincian tabel per-hari</span>
+                </label>
+                <span className="text-[10px] text-slate-500 max-w-[140px] leading-tight hidden lg:inline">
+                  (Matikan agar tidak membuat puluhan sheet harian)
+                </span>
+              </div>
+            </div>
+
+            {/* TOMBOL UNDUH */}
+            <div className="flex items-center justify-end gap-3 pt-1">
               <button
-                onClick={() => exportToExcel(rekapData.list, `Rekap_Ibadah_OSIS_MPK_${rekapData.fileSuffix}`)}
-                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-all cursor-pointer"
+                type="button"
+                disabled={isExporting}
+                onClick={async () => {
+                  try {
+                    setIsExporting(true);
+                    showToast('Sedang membuat berkas Excel beserta grafik...');
+                    await exportToExcel(rekapData.list, {
+                      title: `Rekap_Ibadah_OSIS_MPK_${exportGrouping.toUpperCase()}_${rekapData.fileSuffix}`,
+                      periodType: exportGrouping,
+                      includeDailySheets,
+                      periodeLabel: rekapData.label,
+                    });
+                    showToast('Berhasil mengunduh berkas Excel (.xlsx)!');
+                  } catch (err) {
+                    console.error(err);
+                    showToast('Terjadi kesalahan saat membuat berkas Excel.');
+                  } finally {
+                    setIsExporting(false);
+                  }
+                }}
+                className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-all cursor-pointer"
               >
                 <FileSpreadsheet className="w-4 h-4" />
-                <span>Unduh Excel (.xlsx)</span>
+                <span>{isExporting ? 'Memproses...' : 'Unduh Excel (.xlsx) + Grafik'}</span>
               </button>
 
               <button
-                onClick={() =>
-                  exportToPDF(
-                    rekapData.list,
-                    rekapData.label,
-                    currentUser.full_name,
-                    'Nurkholis Aiman / Maria Ulfa'
-                  )
-                }
-                className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-95 text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-all cursor-pointer"
+                type="button"
+                disabled={isExporting}
+                onClick={() => {
+                  try {
+                    setIsExporting(true);
+                    showToast('Sedang menyusun dokumen PDF dan diagram...');
+                    exportToPDF(
+                      rekapData.list,
+                      {
+                        periodeLabel: rekapData.label,
+                        periodType: exportGrouping,
+                        includeDailySheets,
+                        kordinatorName: currentUser.full_name,
+                        pembinaName: 'Nurkholis Aiman / Maria Ulfa',
+                      }
+                    );
+                    showToast('Berhasil mengunduh dokumen PDF resmi!');
+                  } catch (err) {
+                    console.error(err);
+                    showToast('Terjadi kesalahan saat menyusun PDF.');
+                  } finally {
+                    setIsExporting(false);
+                  }
+                }}
+                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-95 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-all cursor-pointer"
               >
                 <FileText className="w-4 h-4" />
-                <span>Cetak / Ekspor PDF</span>
+                <span>{isExporting ? 'Memproses...' : 'Cetak / Unduh PDF + Grafik'}</span>
               </button>
             </div>
           </div>

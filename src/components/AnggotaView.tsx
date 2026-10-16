@@ -213,7 +213,7 @@ export default function AnggotaView({ currentUser, onRefreshData }: AnggotaViewP
             {currentUser.agama === 'islam'
               ? currentUser.jenis_kelamin === 'laki-laki'
                 ? 'Kewajiban Sholat Jumat Berjamaah di Masjid'
-                : 'Sholat Dzuhur 4 Rakaat / Kajian Keputihan'
+                : 'Sholat Dzuhur 4 Rakaat / Kajian Keputrian'
               : 'Pendalaman Iman & Ibadah Hari Jumat'}
           </h3>
 
@@ -221,7 +221,7 @@ export default function AnggotaView({ currentUser, onRefreshData }: AnggotaViewP
             {currentUser.agama === 'islam'
               ? currentUser.jenis_kelamin === 'laki-laki'
                 ? 'Seluruh siswa laki-laki (putra) diwajibkan menunaikan Sholat Jumat berjamaah di Masjid Baitul Ilmi SMKN 17 atau masjid sekitar, mendengarkan khutbah, dan mengisi laporan kehadiran.'
-                : 'Siswi perempuan (putri) menunaikan Sholat Dzuhur berjamaah/munfarid atau mengikuti keputihan. Jika sedang haid, silakan pilih status Izin Halangan Syar\'i.'
+                : 'Siswi perempuan (putri) menunaikan Sholat Dzuhur berjamaah/munfarid atau mengikuti keputrian. Jika sedang haid, silakan pilih status Izin Halangan Syar\'i.'
               : 'Siswa Kristen/Katolik mengikuti persekutuan doa dan ibadah pendalaman firman di ruang kebaktian/kelas kerohanian sekolah.'}
           </p>
         </div>

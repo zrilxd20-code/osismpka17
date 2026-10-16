@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Profile, PresensiIbadah, AuditLog } from '@/types/database';
 import { dataService } from '@/lib/data-service';
-import { exportToExcel, exportToPDF } from '@/lib/export-utils';
+import { exportToExcel, exportToPDF, ExportPeriodType } from '@/lib/export-utils';
+import GrafikKehadiran from '@/components/GrafikKehadiran';
 import { formatTanggalIndonesia, formatJamWIB } from '@/lib/time-utils';
 import {
   ShieldCheck,
@@ -23,6 +24,9 @@ export default function PembinaView({ currentUser }: PembinaViewProps) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [filterOrg, setFilterOrg] = useState<string>('semua');
+  const [exportGrouping, setExportGrouping] = useState<ExportPeriodType>('mingguan');
+  const [includeDailySheets, setIncludeDailySheets] = useState<boolean>(false);
+  const [isExporting, setIsExporting] = useState<boolean>(false);
 
   useEffect(() => {
     setPresensiList(dataService.getPresensiList());
@@ -66,30 +70,109 @@ export default function PembinaView({ currentUser }: PembinaViewProps) {
           </p>
         </div>
 
-        {/* Tombol Ekspor Cepat */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => exportToExcel(presensiList, 'Laporan_Pembina_OSIS_MPK')}
-            className="px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-colors"
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span>Ekspor Excel (.xlsx)</span>
-          </button>
+        {/* Kontrol dan Tombol Ekspor Berkas Resmi */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex flex-col gap-1.5">
+            <div className="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200">
+              <button
+                type="button"
+                onClick={() => setExportGrouping('mingguan')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  exportGrouping === 'mingguan'
+                    ? 'bg-purple-700 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                🗓️ Per Minggu
+              </button>
+              <button
+                type="button"
+                onClick={() => setExportGrouping('bulanan')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  exportGrouping === 'bulanan'
+                    ? 'bg-purple-700 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                📊 Per Bulan
+              </button>
+              <button
+                type="button"
+                onClick={() => setExportGrouping('harian')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  exportGrouping === 'harian'
+                    ? 'bg-purple-700 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                📅 Per Hari
+              </button>
+            </div>
 
-          <button
-            onClick={() =>
-              exportToPDF(
-                presensiList,
-                'Laporan Semester',
-                'Fadhil Pratama',
-                currentUser.full_name
-              )
-            }
-            className="px-4 py-2.5 rounded-xl bg-rose-700 hover:bg-rose-800 text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-colors"
-          >
-            <FileText className="w-4 h-4" />
-            <span>Cetak PDF Resmi</span>
-          </button>
+            <label className="flex items-center gap-2 cursor-pointer select-none text-[11px] text-slate-600">
+              <input
+                type="checkbox"
+                checked={includeDailySheets}
+                onChange={(e) => setIncludeDailySheets(e.target.checked)}
+                className="w-3.5 h-3.5 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+              />
+              <span>Sertakan rincian tabel per-hari</span>
+            </label>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={isExporting}
+              onClick={async () => {
+                try {
+                  setIsExporting(true);
+                  await exportToExcel(presensiList, {
+                    title: `Laporan_Pembina_OSIS_MPK_${exportGrouping.toUpperCase()}`,
+                    periodType: exportGrouping,
+                    includeDailySheets,
+                    periodeLabel: `Rekapitulasi ${exportGrouping === 'mingguan' ? 'Mingguan' : exportGrouping === 'bulanan' ? 'Bulanan' : 'Harian'}`,
+                  });
+                } catch (e) {
+                  console.error(e);
+                } finally {
+                  setIsExporting(false);
+                }
+              }}
+              className="px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>{isExporting ? 'Memproses...' : 'Ekspor Excel (.xlsx)'}</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={isExporting}
+              onClick={() => {
+                try {
+                  setIsExporting(true);
+                  exportToPDF(
+                    presensiList,
+                    {
+                      periodeLabel: `Rekapitulasi ${exportGrouping === 'mingguan' ? 'Mingguan' : exportGrouping === 'bulanan' ? 'Bulanan' : 'Harian'}`,
+                      periodType: exportGrouping,
+                      includeDailySheets,
+                      kordinatorName: 'Fadhil Pratama',
+                      pembinaName: currentUser.full_name,
+                    }
+                  );
+                } catch (e) {
+                  console.error(e);
+                } finally {
+                  setIsExporting(false);
+                }
+              }}
+              className="px-4 py-2.5 rounded-xl bg-rose-700 hover:bg-rose-800 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+            >
+              <FileText className="w-4 h-4" />
+              <span>{isExporting ? 'Memproses...' : 'Cetak PDF Resmi'}</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -130,6 +213,9 @@ export default function PembinaView({ currentUser }: PembinaViewProps) {
           <div className="text-[11px] text-rose-600 mt-1">Check-in Tidak Jujur</div>
         </div>
       </div>
+
+      {/* GRAFIK KEHADIRAN INTERAKTIF DI WEB */}
+      <GrafikKehadiran data={filteredPresensi} periodLabel="Grafik Kehadiran Pembina" />
 
       {/* TABEL REKAPITULASI DETAIL READ-ONLY */}
       <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">

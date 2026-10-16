@@ -311,7 +311,7 @@ export function getDetailHariWIB(dateStr?: string): DetailHariWIB {
     isHariSekolah: isSekolah,
     tanggalFormat: formatTanggalIndonesia(targetDateStr),
     deskripsiJumat: jumat
-      ? 'Hari Jumat Berkah: Sholat Jumat Berjamaah di Masjid untuk Putra & Sholat Dzuhur/Keputihan untuk Putri'
+      ? 'Hari Jumat Berkah: Sholat Jumat Berjamaah di Masjid untuk Putra & Sholat Dzuhur/Keputrian untuk Putri'
       : liburNasional
       ? `Libur Nasional (${liburNasional}): Tidak ada kewajiban presensi ibadah harian sekolah`
       : weekend
@@ -340,8 +340,8 @@ export function getLabelIbadahKontekstual(
         };
       } else if (jenisKelamin === 'perempuan') {
         return {
-          label: 'Sholat Dzuhur / Keputihan',
-          subLabel: 'Sholat Dzuhur 4 Rakaat atau Kajian Keputihan Jumat',
+          label: 'Sholat Dzuhur / Keputrian',
+          subLabel: 'Sholat Dzuhur 4 Rakaat atau Kajian Keputrian Jumat',
           isJumatan: true,
         };
       }

@@ -41,6 +41,7 @@ export async function GET(req: NextRequest) {
     const today = getServerDateWIB();
     const dari = searchParams.get('dari') || today;
     const sampai = searchParams.get('sampai') || today;
+    const detailHarian = searchParams.get('detail_harian') === 'true';
 
     const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
     let dataList: Array<{
@@ -123,15 +124,25 @@ export async function GET(req: NextRequest) {
       workbook.creator = 'OSIS MPK Divisi Keagamaan';
       workbook.created = new Date();
 
-      const sheet = workbook.addWorksheet('Rekapitulasi Ibadah');
+      // Helper Unicode Bar
+      const makeBar = (pct: number) => {
+        const c = Math.max(0, Math.min(100, Math.round(pct)));
+        const filled = Math.round(c / 10);
+        return `${'█'.repeat(filled)}${'░'.repeat(10 - filled)} ${c}%`;
+      };
+
+      // ------------------------------------------
+      // SHEET 1: REKAPITULASI & GRAFIK TREN
+      // ------------------------------------------
+      const sheet = workbook.addWorksheet('Rekapitulasi & Grafik');
 
       // Title
-      sheet.mergeCells('A1:I1');
+      sheet.mergeCells('A1:J1');
       sheet.getCell('A1').value = 'LAPORAN REKAPITULASI PRESENSI IBADAH OSIS & MPK';
       sheet.getCell('A1').font = { bold: true, size: 14, color: { argb: 'FF1E293B' } };
       sheet.getCell('A1').alignment = { horizontal: 'center' };
 
-      sheet.mergeCells('A2:I2');
+      sheet.mergeCells('A2:J2');
       sheet.getCell('A2').value = `Periode: ${dari} s/d ${sampai} | Tanggal Cetak: ${today}`;
       sheet.getCell('A2').font = { italic: true, size: 10, color: { argb: 'FF64748B' } };
       sheet.getCell('A2').alignment = { horizontal: 'center' };
@@ -148,6 +159,7 @@ export async function GET(req: NextRequest) {
         'Izin',
         'Tidak Hadir',
         'Persentase',
+        'Grafik Kehadiran',
       ];
       sheet.getRow(4).font = { bold: true, color: { argb: 'FFFFFFFF' } };
       sheet.getRow(4).fill = {
@@ -167,6 +179,7 @@ export async function GET(req: NextRequest) {
         { key: 'izin', width: 10 },
         { key: 'tidak_hadir', width: 14 },
         { key: 'persen', width: 14 },
+        { key: 'grafik', width: 22 },
       ];
 
       dataList.forEach((row, idx) => {
@@ -181,8 +194,93 @@ export async function GET(req: NextRequest) {
           row.izin,
           row.tidak_hadir,
           `${row.persen}%`,
+          makeBar(row.persen),
         ]);
       });
+
+      // ------------------------------------------
+      // SHEET 2..N: DETAIL PRESENSI PERSHEET 1 HARI (HANYA JIKA detailHarian === true)
+      // ------------------------------------------
+      if (detailHarian) {
+        // Kelompokkan data checkin per tanggal
+        const rawCheckins = !isDemo
+          ? (await (async () => {
+              const supabase = await createClient();
+              const { data } = await supabase.from('checkin').select('*, profile:profiles(*)').gte('tanggal', dari).lte('tanggal', sampai);
+              return data || [];
+            })())
+          : dataService.getPresensiList();
+
+        const dailyCheckinMap = new Map<string, typeof rawCheckins>();
+        rawCheckins.forEach((c) => {
+          const tgl = c.tanggal || today;
+          if (!dailyCheckinMap.has(tgl)) dailyCheckinMap.set(tgl, []);
+          dailyCheckinMap.get(tgl)!.push(c);
+        });
+
+        const dates = Array.from(dailyCheckinMap.keys()).sort();
+        dates.forEach((tgl) => {
+          const cleanName = tgl.replace(/[:\\/?*[\]]/g, '-').slice(0, 31);
+          const daySheet = workbook.addWorksheet(cleanName);
+
+          daySheet.mergeCells('A1:H1');
+          daySheet.getCell('A1').value = `PRESENSI IBADAH HARIAN - TANGGAL: ${tgl}`;
+          daySheet.getCell('A1').font = { bold: true, size: 12, color: { argb: 'FF0F766E' } };
+
+          daySheet.getRow(3).values = [
+            'No',
+            'NIS',
+            'Nama Siswa',
+            'Kelas',
+            'Agama',
+            'Status',
+            'Jam Check-in',
+            'Status Verifikasi',
+            'Catatan',
+          ];
+          daySheet.getRow(3).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+          daySheet.getRow(3).fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FF1E293B' },
+          };
+
+          daySheet.columns = [
+            { key: 'no', width: 6 },
+            { key: 'nis', width: 14 },
+            { key: 'nama', width: 30 },
+            { key: 'kelas', width: 14 },
+            { key: 'agama', width: 14 },
+            { key: 'status', width: 16 },
+            { key: 'jam', width: 16 },
+            { key: 'verif', width: 20 },
+            { key: 'catatan', width: 30 },
+          ];
+
+          const dayList = dailyCheckinMap.get(tgl) || [];
+          dayList.forEach((item, index) => {
+            const profile = item.profile || {};
+            const statusLabel =
+              item.status === 'hadir'
+                ? 'Hadir'
+                : item.status === 'izin' || item.status === 'izin_halangan'
+                ? `Izin (${item.keterangan || 'Halangan'})`
+                : 'Tidak Hadir';
+
+            daySheet.addRow([
+              index + 1,
+              profile.nis || '-',
+              profile.nama || profile.full_name || '-',
+              profile.kelas || '-',
+              (profile.agama || '-').toUpperCase(),
+              statusLabel,
+              item.waktu_checkin || item.dibuat_pada || '-',
+              item.status_verifikasi || 'menunggu',
+              item.catatan_verifikasi || item.catatan_pengurus || '-',
+            ]);
+          });
+        });
+      }
 
       const buffer = await workbook.xlsx.writeBuffer();
 
