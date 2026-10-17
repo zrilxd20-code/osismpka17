@@ -326,6 +326,18 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
     if (onRefreshData) onRefreshData();
   };
 
+  // Aksi Verifikasi Semua yang Masih Menunggu Sekaligus
+  const handleVerifyAll = () => {
+    const pendingList = selectedDatePresensi.filter((p) => p.status_verifikasi === 'menunggu');
+    if (pendingList.length === 0) return;
+    pendingList.forEach((item) => {
+      dataService.updateVerifikasi(item.id, 'terverifikasi', 'Diverifikasi langsung oleh pengurus');
+    });
+    showToast(`${pendingList.length} presensi berhasil diverifikasi sekaligus.`);
+    loadAllData();
+    if (onRefreshData) onRefreshData();
+  };
+
   // Tandai Cepat "Tidak Hadir" untuk anggota yang belum check-in
   const handleMarkAbsent = (member: Profile) => {
     const ibadah: IbadahType = member.agama === 'islam' ? 'sholat_dzuhur' : 'pendalaman_iman';
@@ -777,10 +789,21 @@ export default function PengurusView({ currentUser, onRefreshData }: PengurusVie
 
           {/* SECTION 2: DAFTAR PRESENSI & VERIFIKASI */}
           <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <h3 className="font-bold text-sm text-slate-900">
                 Presensi Terkirim & Antrean Verifikasi ({filteredPresensi.length})
               </h3>
+
+              {stats.pendingVerif > 0 && (
+                <button
+                  type="button"
+                  onClick={handleVerifyAll}
+                  className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer self-start sm:self-auto"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Verifikasi Semua yang Menunggu ({stats.pendingVerif})</span>
+                </button>
+              )}
             </div>
 
             {filteredPresensi.length === 0 ? (
