@@ -43,7 +43,7 @@ VALUES
     ('00000000-0000-0000-0000-000000000024', '2425024', 'Muhammad Irvan Hakim', 'XI RPL 2', 'Anggota OSIS', 'islam', 'anggota', true, true),
     ('00000000-0000-0000-0000-000000000025', '2425025', 'Nabila Firanisa Ramadhani', 'XI RPL 1', 'Anggota OSIS', 'islam', 'anggota', true, true),
     ('00000000-0000-0000-0000-000000000026', '2425026', 'Nisfa Alvia Rahmadany', 'X BR 1', 'Anggota OSIS', 'islam', 'anggota', true, true),
-    ('00000000-0000-0000-0000-000000000027', '2425027', 'Novita Gendhis Pramesththi', 'X MP', 'Anggota OSIS', 'islam', 'anggota', true, true),
+    ('00000000-0000-0000-0000-000000000027', '2425027', 'Novita Gendhis Pramesthi', 'X MP', 'Anggota OSIS', 'islam', 'anggota', true, true),
     ('00000000-0000-0000-0000-000000000028', '2425028', 'Nur Efendy', 'X BR 2', 'Anggota OSIS', 'islam', 'anggota', true, true),
     ('00000000-0000-0000-0000-000000000029', '2425029', 'Oneal Pratama', 'XI AK 1', 'Anggota OSIS', 'islam', 'anggota', true, true),
     ('00000000-0000-0000-0000-000000000030', '2425030', 'Polbe Seriota Sihite', 'XI AK 1', 'Anggota OSIS', 'kristen', 'anggota', true, true),
